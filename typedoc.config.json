@@ -1,0 +1,8 @@
+{
+    "entryPoints": [
+
+    ],
+    "exclude": "**/__test__/*.ts",
+    "out": "./docs",
+    "includes": ["./tutorial"]
+}
