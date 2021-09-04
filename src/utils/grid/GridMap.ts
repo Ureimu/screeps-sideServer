@@ -3,7 +3,8 @@ import {
     RoomObjectType,
     SpecifiedRoomObject
 } from "node-ts-screeps-api/dist/src/rawApiType/roomObjects";
-import { GridPosition } from "./type";
+import { DrawMap } from "utils/blockVisual/draw";
+import { Coord, GridPosition } from "./type";
 
 export class GridMap {
     public grid: GridPosition[][];
@@ -14,6 +15,7 @@ export class GridMap {
         "3": "wall"
     };
     public objects: AnyRoomObjects[];
+    public terrainData: string;
     public constructor(terrainData: string, objects: AnyRoomObjects[]) {
         this.grid = Array(50)
             .fill(0)
@@ -25,14 +27,16 @@ export class GridMap {
                             x,
                             y,
                             terrain: this.terrainMap[terrainData[x + y * 50] as "0" | "1" | "2" | "3"],
-                            objects: this.getObjectsInPos(x, y, objects)
+                            objects: this.getObjectsInPos({ x, y }, objects)
                         };
                     });
             });
+        this.terrainData = terrainData;
         this.objects = objects;
     }
 
-    public getObjectsInPos(x: number, y: number, objects: AnyRoomObjects[]): AnyRoomObjects[] {
+    public getObjectsInPos(coord: Coord, objects: AnyRoomObjects[]): AnyRoomObjects[] {
+        const { x, y } = coord;
         return objects.filter(anyObject => anyObject.x === x && anyObject.y === y);
     }
 
@@ -42,8 +46,12 @@ export class GridMap {
         return this.objects.filter<SpecifiedRoomObject<T>>(typed);
     }
 
-    public getDistance(a: { x: number; y: number }, b: { x: number; y: number }): number {
+    public getDistance(a: Coord, b: Coord): number {
         return Math.max(Math.abs(a.x - b.x), Math.abs(a.y - b.y));
+    }
+
+    public async drawMap(savePath: string): Promise<void> {
+        await new DrawMap().getVisual(this.terrainData, this.objects, savePath);
     }
 }
 

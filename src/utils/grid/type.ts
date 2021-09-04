@@ -6,3 +6,8 @@ export interface GridPosition {
     terrain: "plain" | "swamp" | "wall";
     objects: AnyRoomObjects[];
 }
+
+export interface Coord {
+    x: number;
+    y: number;
+}
