@@ -19,7 +19,8 @@
 /coverage-ts
 # TypeScript definitions installed by Typings
 /typings
-
+#
+output.jpg
 # Screeps Config
 screeps.json
 screepsUserData.ts
@@ -100,3 +101,4 @@ $RECYCLE.BIN/
 
 # Windows shortcuts
 *.lnk
+output.jpg

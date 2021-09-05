@@ -2,6 +2,7 @@
 /* eslint-disable @typescript-eslint/no-unsafe-member-access */
 import { AnyRoomObjects } from "node-ts-screeps-api/dist/src/rawApiType/roomObjects";
 import sharp from "sharp";
+import { BaseObjectInfo } from "utils/common/type";
 import { getObjectPictureBuffer } from "./imgMap";
 
 export class DrawMap {
@@ -28,8 +29,8 @@ export class DrawMap {
         outputPath: string,
         drawOverOrigin: boolean
     ): Promise<void> {
-        // 一次布局超过166个图片在测试中会导致未知错误，只好进行多次读写。
-        const onceNum = 166;
+        // 一次布局超过166（？）个图片在测试中会导致未知错误（没有任何被抛出的报错），只好进行多次读写。这个数量不确定，感觉和机器性能有关
+        const onceNum = 20;
 
         const compLength = compositeInput.length;
         if (!drawOverOrigin) {
@@ -70,7 +71,7 @@ export class DrawMap {
         await this.compositeLayout(compositeInput, outputPath, false);
         return "ok";
     }
-    public async drawObjectLayout(objects: AnyRoomObjects[], outputPath = "output.jpg"): Promise<void> {
+    public async drawObjectLayout(objects: BaseObjectInfo[], outputPath = "output.jpg"): Promise<void> {
         const objectPicBuffer: { [name: string]: Buffer } = {
             constructedWall: await getObjectPictureBuffer("constructedWall"),
             container: await getObjectPictureBuffer("container"),
@@ -107,6 +108,7 @@ export class DrawMap {
                         input: objectPicBuffer[type]
                     };
                 } else {
+                    if (!objectHere.mineralType) throw new Error("unknown mineralType");
                     return {
                         top: y * 16,
                         left: x * 16,
@@ -121,7 +123,7 @@ export class DrawMap {
         const newBuffer = await sharp(outputPath).toBuffer();
         await sharp(newBuffer).flip().rotate(-90).toFile(outputPath);
     }
-    public async getVisual(terrain: string, objects: AnyRoomObjects[], outputPath = "output.jpg"): Promise<void> {
+    public async getVisual(terrain: string, objects: BaseObjectInfo[], outputPath = "output.jpg"): Promise<void> {
         await this.drawTerrainLayout(terrain, outputPath);
         await this.drawObjectLayout(objects, outputPath);
         // await this.getProperlyDirectionOfVisual(outputPath);
