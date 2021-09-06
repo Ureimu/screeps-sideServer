@@ -11,7 +11,7 @@ export class PriorityQueue<T extends PriorityNode> {
      * @param {boolean} [direction=false] true 为由大到小，false为由小到大
      * @memberof PriorityQueue
      */
-    public constructor(public tree: T[], public direction = false) {}
+    public constructor(public tree: T[], public direction = true) {}
     public get size(): number {
         return this.tree.length;
     }

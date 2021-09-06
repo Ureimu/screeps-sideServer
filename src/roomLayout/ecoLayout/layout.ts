@@ -11,7 +11,7 @@ export function ecoLayout(map: GridMap): void {
     const controller = map.findObjects("controller")[0];
     const blankSpace = map.hollowSquarePos(controller, 4);
     console.log(blankSpace);
-    // map.addStructure("road", 1, 10, ...blankSpace);
+    map.addStructure("road", 1, 10, ...blankSpace);
 
     // 从source到controller的路
     const path = map.findPath(sources[0], controller, 1).path;
