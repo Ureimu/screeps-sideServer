@@ -53,3 +53,10 @@ type STRUCTURE_NUKER = "nuker";
 type STRUCTURE_FACTORY = "factory";
 type STRUCTURE_INVADER_CORE = "invaderCore";
 type STRUCTURE_PORTAL = "portal";
+
+export interface Range {
+    xMin: number;
+    xMax: number;
+    yMin: number;
+    yMax: number;
+}

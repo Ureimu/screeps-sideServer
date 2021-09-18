@@ -1,9 +1,8 @@
-/* eslint-disable @typescript-eslint/no-unsafe-call */
-/* eslint-disable @typescript-eslint/no-unsafe-member-access */
-import { AnyRoomObjects } from "node-ts-screeps-api/dist/src/rawApiType/roomObjects";
 import sharp from "sharp";
+import { coordUnitWidth, picBasePath } from "utils/common/constants";
 import { BaseObjectInfo } from "utils/common/type";
 import { Coord } from "utils/Grid/type";
+import { SvgCode } from "utils/SvgCode";
 import { getObjectPictureBuffer } from "./imgMap";
 
 export class DrawMap {
@@ -41,7 +40,7 @@ export class DrawMap {
 
         const compLength = compositeInput.length;
         if (!drawOverOrigin) {
-            await sharp("src\\utils\\blockVisual\\imgs\\bg.png").toFile(outputPath);
+            await sharp(`${picBasePath}bg.png`).toFile(outputPath);
         }
 
         for (let i = 0; i < Math.ceil(compLength / onceNum); i++) {
@@ -68,8 +67,8 @@ export class DrawMap {
                         .fill(0)
                         .map((_n, y) => {
                             return {
-                                top: y * 16,
-                                left: x * 16,
+                                top: y * coordUnitWidth,
+                                left: x * coordUnitWidth,
                                 input: terrainPicBuffer[this.terrainMap[terrain[x + y * 50] as "0" | "1" | "2" | "3"]]
                             };
                         });
@@ -111,7 +110,7 @@ export class DrawMap {
             observer: await getObjectPictureBuffer("observer"),
             powerSpawn: await getObjectPictureBuffer("powerSpawn"),
             rampart: await getObjectPictureBuffer("rampart"),
-            road: await getObjectPictureBuffer("road_big"),
+            road: await getObjectPictureBuffer("road_dot"),
             source: await getObjectPictureBuffer("source"),
             spawn: await getObjectPictureBuffer("spawn"),
             storage: await getObjectPictureBuffer("storage"),
@@ -134,8 +133,8 @@ export class DrawMap {
                 const { x, y, type } = objectHere;
                 if (type !== "mineral") {
                     return {
-                        top: y * 16,
-                        left: x * 16,
+                        top: y * coordUnitWidth,
+                        left: x * coordUnitWidth,
                         input: objectPicBuffer[type],
                         type: objectHere.type,
                         x,
@@ -144,8 +143,8 @@ export class DrawMap {
                 } else {
                     if (!objectHere.mineralType) throw new Error("unknown mineralType");
                     return {
-                        top: y * 16,
-                        left: x * 16,
+                        top: y * coordUnitWidth,
+                        left: x * coordUnitWidth,
                         input: objectPicBuffer[objectHere.mineralType],
                         type: objectHere.type,
                         x,
@@ -168,7 +167,7 @@ export class DrawMap {
 
                     const posStr = (coord: Coord) => `${coord.x},${coord.y}`;
                     const directionStr = posStr({ x: dx, y: dy });
-                    console.log(posStr({ x: dx, y: dy }), posStr(road), posStr(nearRoad));
+                    // console.log(posStr({ x: dx, y: dy }), posStr(road), posStr(nearRoad));
                     const directionList: { [name: string]: string } = {
                         "0,1": "roadNS",
                         "0,-1": "roadNS",
@@ -180,8 +179,8 @@ export class DrawMap {
                         "1,-1": "roadENWS"
                     };
                     compositeInput.push({
-                        top: road.top - 8 * dy,
-                        left: road.left - 8 * dx,
+                        top: road.top - (coordUnitWidth / 2 - coordUnitWidth / 16) * dy,
+                        left: road.left - (coordUnitWidth / 2 - coordUnitWidth / 16) * dx,
                         input: objectPicBuffer[directionList[directionStr]],
                         type: directionList[directionStr],
                         x: -1,
@@ -190,20 +189,57 @@ export class DrawMap {
                 }
             })
         );
+        // road 放在最前渲染
+        compositeInput.sort((b, a) => {
+            const typeNameList = ["road", "roadNS", "roadEW", "roadWNES", "roadENWS"];
+            if (typeNameList.includes(a.type)) {
+                if (typeNameList.includes(b.type)) return 0;
+                else return 1;
+            } else {
+                if (typeNameList.includes(b.type)) return -1;
+                else return 0;
+            }
+        });
         // rampart 放在最后渲染
         compositeInput.sort((a, b) => {
             if (a.type === "rampart") {
                 if (b.type === "rampart") return 0;
-                else return 1;
+                else return -1;
             } else {
-                if (b.type === "rampart") return -1;
+                if (b.type === "rampart") return 1;
                 else return 0;
             }
         });
         await this.compositeLayout(compositeInput, outputPath, true);
     }
-    public async getVisual(terrain: string, objects: BaseObjectInfo[], outputPath = "output.jpg"): Promise<void> {
+    public mulConst = coordUnitWidth;
+    public async addSVG(svgCode: SvgCode, outputPath = "output.jpg"): Promise<void> {
+        const dataBuffer = await sharp(Buffer.from(svgCode.code())).toBuffer();
+        await this.compositeLayout(
+            [
+                {
+                    top: svgCode.range.yMin * coordUnitWidth,
+                    left: svgCode.range.xMin * coordUnitWidth,
+                    input: dataBuffer
+                }
+            ],
+            outputPath,
+            true
+        );
+    }
+    public async drawVisualData(dataList: SvgCode[], outputPath = "output.jpg"): Promise<void> {
+        for (const element of dataList) {
+            await this.addSVG(element, outputPath);
+        }
+    }
+    public async getVisual(
+        terrain: string,
+        objects: BaseObjectInfo[],
+        visualDataList: SvgCode[],
+        outputPath = "output.jpg"
+    ): Promise<void> {
         await this.drawTerrainLayout(terrain, outputPath);
         await this.drawObjectLayout(objects, outputPath);
+        await this.drawVisualData(visualDataList, outputPath);
     }
 }

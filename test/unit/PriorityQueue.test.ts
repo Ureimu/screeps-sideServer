@@ -2,7 +2,7 @@ import { apiConfig } from "main";
 import * as assert from "assert";
 import { DrawMap } from "utils/blockVisual/draw";
 import { ScreepsApi } from "node-ts-screeps-api";
-import { PriorityQueue } from "utils/priorityQueue/priorityQueue";
+import { PriorityQueue } from "utils/PriorityQueue/priorityQueue";
 
 // 上面的userData需要自己在根目录创建，示例参照根目录的authInfoSample.ts
 describe("PriorityQueue", () => {
