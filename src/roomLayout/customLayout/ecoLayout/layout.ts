@@ -29,8 +29,8 @@ export function ecoLayout(map: GridMap): void {
         const limitCoord = bestArea?.limit[0].coordList;
         console.log(result);
         if (result) {
-            map.addStructure("road", 1, 10, ...result);
-            map.addStructure("container", 1, 10, result[0]);
+            map.addStructure("baseRoad", 1, 10, ...result);
+            map.addStructure("sourceContainer", 1, 10, result[0]);
             const posNearRoad = map.nearPos(result, 1);
 
             // 从sourceContainer到controller的路
@@ -42,11 +42,11 @@ export function ecoLayout(map: GridMap): void {
                 ]
             }).path;
             path.shift();
-            map.addStructure("road", 1, 10, ...path);
+            map.addStructure("baseRoad", 1, 10, ...path);
             if (posNearRoad.length > 3) {
                 map.sortCoordByDistance(source, posNearRoad, -1);
                 map.addStructure("spawn", 7, 1, posNearRoad.pop() as Coord);
-                map.addStructure("link", 7, 1, posNearRoad.pop() as Coord);
+                map.addStructure("sourceLink", 7, 1, posNearRoad.pop() as Coord);
             }
 
             const numberE = map.addStructure("extension", 5, 1, ...posNearRoad);

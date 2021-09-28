@@ -13,6 +13,7 @@ export default {
         format: "cjs",
         sourcemap: true,
     },
+    external: ['sharp'],// marking sharp as external module to dynamically require build files correctly
 
     plugins: [
         clear({ targets: ["dist"] }),

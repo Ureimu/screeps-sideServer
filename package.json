@@ -5,6 +5,8 @@
     "main": "dist/main.js",
     "typings": "./dist/src/main.d.ts",
     "scripts": {
+        "devTest": "rollup -c && node -r source-map-support/register dist/main.js dev",
+        "privateTest": "rollup -c && node -r source-map-support/register dist/main.js private",
         "lint": "eslint \"src/**/*.ts\"",
         "build": "rollup -c",
         "test": "npm run test-unit & npm run test-integration",
@@ -65,9 +67,10 @@
         "axios": "^0.21.1",
         "bufferutil": "^4.0.3",
         "node-gyp": "^8.2.0",
-        "node-ts-screeps-api": "^0.0.6",
+        "node-ts-screeps-api": "^0.0.8",
         "sharp": "^0.29.1",
         "source-map": "0.7.3",
+        "source-map-support": "^0.5.20",
         "text-to-svg": "^3.1.5",
         "utf-8-validate": "^5.0.5",
         "ws": "^8.2.1"

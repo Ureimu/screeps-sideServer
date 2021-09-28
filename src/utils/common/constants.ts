@@ -17,5 +17,5 @@ export const CONTROLLER_STRUCTURES = {
     factory: { 0: 0, 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0, 7: 1, 8: 1 }
 };
 
-export const coordUnitWidth = 64;
+export const coordUnitWidth = 16;
 export const picBasePath = `src/utils/blockVisual/imgs/${coordUnitWidth}/`;

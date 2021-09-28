@@ -1,17 +1,19 @@
 import sharp from "sharp";
 import { coordUnitWidth, picBasePath } from "utils/common/constants";
-import { BaseObjectInfo } from "utils/common/type";
+import { BaseObjectInfo, StructureConstant } from "utils/common/type";
 import { Coord } from "utils/Grid/type";
+import { getStructureTypeBySpecifiedName } from "utils/RoomGridMap/nameList";
+import { SpecifiedStructureNameList } from "utils/RoomGridMap/type";
 import { SvgCode } from "utils/SvgCode";
 import { getObjectPictureBuffer } from "./imgMap";
 
 export class DrawMap {
     public test: boolean;
     public readonly rangeSettings: { xMin: number; yMin: number; xMax: number; yMax: number } = {
-        xMin: 1,
-        yMin: 1,
-        xMax: 48,
-        yMax: 48
+        xMin: 0,
+        yMin: 0,
+        xMax: 49,
+        yMax: 49
     };
     public constructor() {
         this.test = true;
@@ -33,48 +35,56 @@ export class DrawMap {
     public async compositeLayout(
         compositeInput: sharp.OverlayOptions[],
         outputPath: string,
-        drawOverOrigin: boolean
+        drawBaseSize: [number, number] | false
     ): Promise<void> {
         // 一次布局超过166（？）个图片在测试中会导致未知错误（没有任何被抛出的报错），只好进行多次读写。这个数量不确定，感觉和机器性能有关
         const onceNum = 20;
-
         const compLength = compositeInput.length;
-        if (!drawOverOrigin) {
-            await sharp(`${picBasePath}bg.png`).toFile(outputPath);
+        if (drawBaseSize) {
+            const baseSize = [drawBaseSize[0] * coordUnitWidth, drawBaseSize[1] * coordUnitWidth];
+            await sharp(`${picBasePath}bg.png`)
+                .resize(...baseSize)
+                .toFile(outputPath);
         }
 
         for (let i = 0; i < Math.ceil(compLength / onceNum); i++) {
             const newBuffer = await sharp(outputPath).toBuffer();
             const sharpInstance = sharp(newBuffer);
-            await sharpInstance
-                .composite(
-                    compositeInput.slice(i * onceNum, (i + 1) * onceNum > compLength ? compLength : (i + 1) * onceNum)
-                )
-                .toFile(outputPath);
+            const sliceData = compositeInput.slice(
+                i * onceNum,
+                (i + 1) * onceNum > compLength + 1 ? compLength + 1 : (i + 1) * onceNum
+            );
+            console.log(sliceData.length);
+            await sharpInstance.composite(sliceData).toFile(outputPath);
         }
     }
-    public async drawTerrainLayout(terrain: string, outputPath = "output.jpg"): Promise<string> {
+    public async drawTerrainLayout(
+        terrain: string,
+        mapSize: [xLength: number, yLength: number],
+        outputPath = "output.jpg"
+    ): Promise<string> {
         const terrainPicBuffer: { [name: string]: Buffer } = {
             wall: await getObjectPictureBuffer("wall"),
             swamp: await getObjectPictureBuffer("swamp")
             // plain: await getObjectPictureBuffer("plain")
         };
+        const [xMax, yMax] = mapSize;
         const compositeInput = _.flatten(
-            Array(50)
+            Array(xMax)
                 .fill(0)
                 .map((_m, x) => {
-                    return Array(50)
+                    return Array(yMax)
                         .fill(0)
                         .map((_n, y) => {
                             return {
                                 top: y * coordUnitWidth,
                                 left: x * coordUnitWidth,
-                                input: terrainPicBuffer[this.terrainMap[terrain[x + y * 50] as "0" | "1" | "2" | "3"]]
+                                input: terrainPicBuffer[this.terrainMap[terrain[x + y * xMax] as "0" | "1" | "2" | "3"]]
                             };
                         });
                 })
         ).filter(val => val.input);
-        await this.compositeLayout(compositeInput, outputPath, false);
+        await this.compositeLayout(compositeInput, outputPath, mapSize);
         return "ok";
     }
     private ifInBorder(x: number, y: number): boolean {
@@ -103,6 +113,7 @@ export class DrawMap {
             container: await getObjectPictureBuffer("container"),
             controller: await getObjectPictureBuffer("controller"),
             extension: await getObjectPictureBuffer("extension"),
+            extractor: await getObjectPictureBuffer("extractor"),
             factory: await getObjectPictureBuffer("factory"),
             lab: await getObjectPictureBuffer("lab"),
             link: await getObjectPictureBuffer("link"),
@@ -131,12 +142,15 @@ export class DrawMap {
         const compositeInput = objects
             .map(objectHere => {
                 const { x, y, type } = objectHere;
+                const structureType = getStructureTypeBySpecifiedName(type);
+                // if (structureType === "link" || structureType === "road") console.log(type);
+                // if (structureType === "rampart") console.log(type, Boolean(objectPicBuffer[structureType]));
                 if (type !== "mineral") {
                     return {
                         top: y * coordUnitWidth,
                         left: x * coordUnitWidth,
-                        input: objectPicBuffer[type],
-                        type: objectHere.type,
+                        input: objectPicBuffer[structureType],
+                        type: structureType,
                         x,
                         y
                     };
@@ -146,7 +160,7 @@ export class DrawMap {
                         top: y * coordUnitWidth,
                         left: x * coordUnitWidth,
                         input: objectPicBuffer[objectHere.mineralType],
-                        type: objectHere.type,
+                        type: structureType,
                         x,
                         y
                     };
@@ -204,17 +218,18 @@ export class DrawMap {
         compositeInput.sort((a, b) => {
             if (a.type === "rampart") {
                 if (b.type === "rampart") return 0;
-                else return -1;
+                else return 1;
             } else {
-                if (b.type === "rampart") return 1;
+                if (b.type === "rampart") return -1;
                 else return 0;
             }
         });
-        await this.compositeLayout(compositeInput, outputPath, true);
+        await this.compositeLayout(compositeInput, outputPath, false);
     }
     public mulConst = coordUnitWidth;
     public async addSVG(svgCode: SvgCode, outputPath = "output.jpg"): Promise<void> {
         const dataBuffer = await sharp(Buffer.from(svgCode.code())).toBuffer();
+        // console.log(svgCode.code());
         await this.compositeLayout(
             [
                 {
@@ -224,21 +239,30 @@ export class DrawMap {
                 }
             ],
             outputPath,
-            true
+            false
         );
     }
     public async drawVisualData(dataList: SvgCode[], outputPath = "output.jpg"): Promise<void> {
-        for (const element of dataList) {
-            await this.addSVG(element, outputPath);
-        }
+        const dataBufferList = await Promise.all(
+            dataList.map(svgCode => sharp(Buffer.from(svgCode.code())).toBuffer())
+        );
+        const compositeDataList = dataList.map((svgCode, index) => {
+            return {
+                top: svgCode.range.yMin * coordUnitWidth,
+                left: svgCode.range.xMin * coordUnitWidth,
+                input: dataBufferList[index]
+            };
+        });
+        await this.compositeLayout(compositeDataList, outputPath, false);
     }
     public async getVisual(
         terrain: string,
         objects: BaseObjectInfo[],
         visualDataList: SvgCode[],
-        outputPath = "output.jpg"
+        outputPath = "output.jpg",
+        size = [50, 50] as [number, number]
     ): Promise<void> {
-        await this.drawTerrainLayout(terrain, outputPath);
+        await this.drawTerrainLayout(terrain, size, outputPath);
         await this.drawObjectLayout(objects, outputPath);
         await this.drawVisualData(visualDataList, outputPath);
     }

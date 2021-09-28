@@ -1,4 +1,3 @@
-import { BuildableStructureConstant } from "utils/common/type";
 import { PriorityQueue } from "utils/PriorityQueue/priorityQueue";
 
 import {
@@ -23,7 +22,7 @@ export class Grid {
         yMin: 1,
         xMax: 48,
         yMax: 48
-    };
+    }; // creep至少可以走到1，防止建筑被打到就只能放到大于5的位置
     public gridPos(coord: Coord): GridPosition {
         return this.grid[coord.x][coord.y];
     }
@@ -136,6 +135,82 @@ export class Grid {
     }
 
     /**
+     * 获取某点周围和其x,y坐标之和除2的余数相等的点。
+     * ```
+     * Y N Y N Y
+     * N Y N Y N
+     * Y N O N Y
+     * N Y N Y N
+     * Y N Y N Y
+     * ```
+     * Y是会取的点，o是给定的坐标
+     * @param {Coord} pos
+     * @param {number} range
+     * @param {Partial<BasePosOpts>} [opts]
+     * @returns {Coord[]}
+     * @memberof Grid
+     */
+    public mod2equalPos(pos: Coord, range: number, opts?: Partial<BasePosOpts>): Coord[] {
+        opts = this.managePosOpts(this.basePosOpts, opts);
+        const { x, y } = pos;
+        const coordList = [];
+        const posMod2 = (pos.x + pos.y) % 2;
+        for (let i = -range; i <= range; i++) {
+            for (let j = -range; j <= range; j++) {
+                if ((i + j) % 2 !== posMod2) {
+                    continue;
+                }
+                const coord = { x: x + i, y: y + j };
+                if (this.ifInBorder(coord) && (i === range || j === range || i === -range || j === -range)) {
+                    coordList.push(coord);
+                }
+            }
+        }
+        if (opts.ignoreWall) return coordList;
+        else {
+            return coordList.filter(coord => this.grid[coord.x][coord.y].cost < this.MAX_COST);
+        }
+    }
+
+    /**
+     * 获取某点周围和其x,y坐标之和除2的余数不相等的点。
+     * ```
+     * N Y N Y N
+     * Y N Y N Y
+     * N Y O Y N
+     * Y N Y N Y
+     * N Y N Y N
+     * ```
+     * Y是会取的点，o是给定的坐标
+     * @param {Coord} pos
+     * @param {number} range
+     * @param {Partial<BasePosOpts>} [opts]
+     * @returns {Coord[]}
+     * @memberof Grid
+     */
+    public mod2notEqualPos(pos: Coord, range: number, opts?: Partial<BasePosOpts>): Coord[] {
+        opts = this.managePosOpts(this.basePosOpts, opts);
+        const { x, y } = pos;
+        const coordList = [];
+        const posMod2 = (pos.x + pos.y) % 2;
+        for (let i = -range; i <= range; i++) {
+            for (let j = -range; j <= range; j++) {
+                if ((i + j) % 2 === posMod2) {
+                    continue;
+                }
+                const coord = { x: x + i, y: y + j };
+                if (this.ifInBorder(coord) && (i === range || j === range || i === -range || j === -range)) {
+                    coordList.push(coord);
+                }
+            }
+        }
+        if (opts.ignoreWall) return coordList;
+        else {
+            return coordList.filter(coord => this.grid[coord.x][coord.y].cost < this.MAX_COST);
+        }
+    }
+
+    /**
      * 获取坐标字符串
      *
      * @param {Coord} pos
@@ -159,7 +234,7 @@ export class Grid {
     }
 
     /**
-     * 设置位置的移动消耗，影响寻路算法。最大为this.MAX_COST
+     * 设置位置的移动消耗，影响寻路算法。最大为this.MAX_COST.在放置建筑之后，cost可能会改变，所以如果想为container位置设置cost，尽量在该位置添加建筑之后再改变该位置的cost
      *
      * @param {Coord} pos
      * @param {number} cost
@@ -184,7 +259,7 @@ export class Grid {
         if (costList === this.adListCache?.costList && !this.costHasChanged && this.adListCache) {
             return this.adListCache.adList;
         }
-        console.log(`costList?.length: ${costList?.length ?? 0}`);
+        // console.log(`costList?.length: ${costList?.length ?? 0}`);
         const adList: weightedAdjacencyList = {};
         this.grid.forEach(xStack => {
             xStack.forEach(pos => {
@@ -224,7 +299,7 @@ export class Grid {
 
     private pathFinderOpts: PathFinderOpts = {
         ...this.basePosOpts,
-        AStarWeight: 1.2,
+        AStarWeight: 0,
         costList: []
     };
     /**
@@ -246,6 +321,8 @@ export class Grid {
     如果h(n)的值比节点n到终点的代价要大，则A\*算法不能保证找到最短路径，不过此时运行速度会很快。
 
     在另外一个极端情况下，如果h(n)相较于g(n)大很多，则此时只有h(n)产生效果，即为最佳优先搜索。
+
+    在screeps的寻路函数里，该权重为1.2，我们这里无需顾虑寻路消耗，设置为0即可。
      * @returns {PathResult}
      * @memberof Grid
      */
@@ -619,7 +696,7 @@ export class Grid {
      *     }}
      * @memberof Grid
      */
-    public getRange(coordList: Coord[]): {
+    public static getRange(coordList: Coord[]): {
         xMax: number;
         xMin: number;
         yMax: number;

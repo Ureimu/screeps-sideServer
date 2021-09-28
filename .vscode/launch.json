@@ -7,6 +7,11 @@
             "program": "${workspaceFolder}/dist/main.js",
             "skipFiles": [
                 "<node_internals>/**"
+            ],
+            "args": [
+                "dev",
+                "-r",
+                "source-map-support/register",
             ]
         }
     ]

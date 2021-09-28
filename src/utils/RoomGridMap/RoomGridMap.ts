@@ -9,7 +9,8 @@ import { BuildableStructureConstant, ControllerLevel } from "utils/common/type";
 import { Grid } from "utils/Grid/Grid";
 import { Coord, GridPosition } from "utils/Grid/type";
 import { SvgCode } from "utils/SvgCode";
-import { CacheLayoutData, LayoutStructure, RoomGridPosition } from "./type";
+import { getStructureTypeBySpecifiedName } from "./nameList";
+import { CacheLayoutData, LayoutStructure, RoomGridPosition, SpecifiedStructureNameList } from "./type";
 
 export class RoomGridMap extends Grid {
     public grid: RoomGridPosition[][] = this.grid;
@@ -104,20 +105,26 @@ export class RoomGridMap extends Grid {
      * @memberof RoomGridMap
      */
     public addStructure(
-        type: BuildableStructureConstant,
+        type: SpecifiedStructureNameList<BuildableStructureConstant>,
         level: ControllerLevel,
         priority: number,
         ...structures: Coord[]
     ): number {
-        const exceededNum = this.getStatsOfStructure(type, level, structures.length);
+        const structureType = getStructureTypeBySpecifiedName(type);
+        const exceededNum = this.getStatsOfStructure(structureType, level, structures.length);
         if (exceededNum < 0) return exceededNum;
         const typedStructures = structures
             .filter(i => {
                 const gridPos = this.gridPos(i);
-                if (gridPos.cost === this.MAX_COST) {
+                if (
+                    gridPos.cost === this.MAX_COST &&
+                    structureType !== "rampart" &&
+                    structureType !== "road" &&
+                    !(structureType === "extractor" && gridPos.objects.some(j => j.type === "mineral"))
+                ) {
                     return false;
                 }
-                if (gridPos.cost === this.roadCost && type !== "container" && type !== "rampart") {
+                if (gridPos.cost === this.roadCost && structureType !== "container" && type !== "rampart") {
                     return false;
                 }
                 return true;
@@ -144,8 +151,12 @@ export class RoomGridMap extends Grid {
      * @returns {number}
      * @memberof RoomGridMap
      */
-    public removeStructure(type: BuildableStructureConstant, ...structuresPos: Coord[]): number {
+    public removeStructure(
+        type: SpecifiedStructureNameList<BuildableStructureConstant>,
+        ...structuresPos: Coord[]
+    ): number {
         let deleteNum = 0;
+        const structureType = getStructureTypeBySpecifiedName(type);
         structuresPos.forEach(structure => {
             const gridPos = this.gridPos(structure);
             const layout = gridPos.layout;
@@ -153,7 +164,7 @@ export class RoomGridMap extends Grid {
             if (index !== -1) {
                 const deletedStructure = layout.splice(index, 1)[0];
                 this.setCostForPos(gridPos);
-                this.getStatsOfStructure(type, (deletedStructure.levelToBuild ?? 0) as ControllerLevel, -1);
+                this.getStatsOfStructure(structureType, (deletedStructure.levelToBuild ?? 0) as ControllerLevel, -1);
                 deleteNum++;
             }
         });
@@ -177,7 +188,8 @@ export class RoomGridMap extends Grid {
         const gridPos = this.gridPos(pos);
         const costList = gridPos.layout
             .map(structure => {
-                const structureType = structure.type;
+                const type = structure.type;
+                const structureType = getStructureTypeBySpecifiedName(type);
                 if (structureType === "rampart" || structureType === "container") {
                     return -1;
                 } else if (structureType === "road") {
@@ -222,7 +234,7 @@ export class RoomGridMap extends Grid {
         return `x${coord.x}y${coord.y}r${this.roomName}`;
     }
 
-    public generateLayoutData(): string {
+    public generateLayoutData(): CacheLayoutData {
         const firstSpawn = this.layoutStructures.find(i => i.type === "spawn" && i.levelToBuild === 1);
         if (!firstSpawn) throw Error("no first spawn");
         if (!this.centerPos) throw Error("no centerPos");
@@ -232,7 +244,21 @@ export class RoomGridMap extends Grid {
             freeSpacePosList: [],
             centerPos: this.rPosStr(this.centerPos)
         };
-        return JSON.stringify(data);
+        this.layoutStructures.forEach(i => {
+            const structureType = getStructureTypeBySpecifiedName(i.type);
+            if (!data.layout[structureType]) {
+                data.layout[structureType] = {};
+            }
+            if (!data.layout[structureType][i.type]) {
+                data.layout[structureType][i.type] = { requireList: [] };
+            }
+            data.layout[getStructureTypeBySpecifiedName(i.type)][i.type].requireList.push([
+                this.rPosStr(i),
+                i.levelToBuild,
+                i.priority
+            ]);
+        });
+        return data;
     }
 }
 

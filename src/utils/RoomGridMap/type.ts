@@ -9,18 +9,18 @@ export interface RoomGridPosition extends GridPosition {
 }
 
 export interface LayoutStructure extends Coord {
-    type: string;
-    levelToBuild?: number;
+    type: SpecifiedStructureNameList<BuildableStructureConstant>;
+    levelToBuild: number;
     priority: number;
 }
 
-export type formedLayout = {
-    [structureName in BuildableStructureConstant]?: SpecifiedLayoutData<structureName>;
-};
+export interface formedLayout {
+    [name: string]: SpecifiedLayoutData;
+}
 
-export type SpecifiedLayoutData<structureName extends BuildableStructureConstant> = {
-    [specifiedName in SpecifiedStructureNameList<structureName>]?: LayoutDataNode;
-};
+export interface SpecifiedLayoutData {
+    [name: string]: LayoutDataNode;
+}
 
 export interface LayoutDataNode {
     /**
@@ -56,3 +56,12 @@ export interface CacheLayoutData {
     centerPos: string;
     freeSpacePosList: string[];
 }
+
+export type StructureTypeFromSpecifiedStructureName<T extends SpecifiedStructureNameList<StructureConstant>> =
+    T extends SpecifiedStructureNameList<"container">
+        ? "container"
+        : T extends SpecifiedStructureNameList<"link">
+        ? "link"
+        : T extends SpecifiedStructureNameList<"road">
+        ? "road"
+        : T;

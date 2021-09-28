@@ -18,6 +18,7 @@ export class SvgCode {
         rx: 0,
         ry: 0
     };
+    public offset: Coord = { x: 0.5, y: 0.5 };
     public rect(range: Range, style?: Partial<SvgRectStyle>): SvgCode {
         const mergedStyle = _.merge(this.rectStyle, style);
         const argList: string[] = [
@@ -48,6 +49,25 @@ export class SvgCode {
         this.codeList.push(`<text ${argList.join(" ")}>${text}</text>`);
         return this;
     }
+    public circleStyle: SvgCircleStyle = {
+        ...this.baseStyle,
+        r: 0.5
+    };
+    public circle(pos: Coord, style?: Partial<SvgCircleStyle>): SvgCode {
+        const { x, y } = pos;
+        const mergedStyle = _.merge(this.circleStyle, style);
+        const argList: string[] = [
+            `cx="${(x + this.offset.x) * coordUnitWidth}"`,
+            `cy="${(y + this.offset.y) * coordUnitWidth}"`,
+            `r="${mergedStyle.r * coordUnitWidth}"`
+        ];
+        Object.entries(mergedStyle).forEach(([propertyKey, value]) => {
+            if (propertyKey === "r") return;
+            argList.push(`${propertyKey}="${value}"`);
+        });
+        this.codeList.push(`<circle ${argList.join(" ")}/>`);
+        return this;
+    }
     public code(): string {
         return `<svg
         width="${(this.range.xMax - this.range.xMin) * coordUnitWidth}"
@@ -74,4 +94,8 @@ export interface SvgRectStyle extends SvgBaseStyle {
 
 export interface SvgTextStyle extends SvgBaseStyle {
     "font-size": number;
+}
+
+export interface SvgCircleStyle extends SvgBaseStyle {
+    r: number;
 }
