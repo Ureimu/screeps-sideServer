@@ -47,7 +47,7 @@ export class LayoutStr {
     }
     public async drawPreview(output: string, svg: SvgCode[] = []): Promise<void> {
         const map = new DrawMap();
-        await map.getVisual(this.terrainStr, this.requireDataList, svg, output, [
+        await map.getVisual(this.terrainStr, this.requireDataList, svg, undefined, output, [
             this.size.xMax + 1,
             this.size.yMax + 1
         ]);

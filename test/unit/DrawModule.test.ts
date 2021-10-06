@@ -1,4 +1,4 @@
-import { LayoutStr, StructureStrMap } from "roomLayout/modularLayout/LayoutStr/class";
+import { LayoutStr, StructureStrMap } from "utils/LayoutStr/class";
 import { GridMap } from "utils/RoomGridMap";
 import { SvgCode } from "utils/SvgCode";
 

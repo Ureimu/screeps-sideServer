@@ -1,3 +1,5 @@
+import { SingleBar } from "cli-progress";
+import { mkdirSync } from "fs";
 import sharp from "sharp";
 import { coordUnitWidth, picBasePath } from "utils/common/constants";
 import { BaseObjectInfo, StructureConstant } from "utils/common/type";
@@ -35,10 +37,14 @@ export class DrawMap {
     public async compositeLayout(
         compositeInput: sharp.OverlayOptions[],
         outputPath: string,
-        drawBaseSize: [number, number] | false
+        drawBaseSize: [number, number] | false,
+        label: string
     ): Promise<void> {
-        // 一次布局超过166（？）个图片在测试中会导致未知错误（没有任何被抛出的报错），只好进行多次读写。这个数量不确定，感觉和机器性能有关
-        const onceNum = 20;
+        // 一次布局超过166（？）个图片在测试中会导致stack overflow error（没有任何被抛出的报错），只好进行多次读写。这个数量不确定，感觉和机器性能有关.
+        // 但是多次读写对运行时间影响不大。
+        // 参见 https://github.com/lovell/sharp/issues/2286
+        const startTime = Date.now();
+        const onceNum = 100;
         const compLength = compositeInput.length;
         if (drawBaseSize) {
             const baseSize = [drawBaseSize[0] * coordUnitWidth, drawBaseSize[1] * coordUnitWidth];
@@ -46,17 +52,26 @@ export class DrawMap {
                 .resize(...baseSize)
                 .toFile(outputPath);
         }
-
+        let bufferCache = await sharp(outputPath).toBuffer();
+        let lastEndTime = Date.now();
+        // const profilerStr = (startTimeH: number, endTimeH: number, compLengthH: number, subLabel: string) =>
+        //     `${label} ${subLabel} ${outputPath} ${endTimeH - startTimeH}ms length ${compLength + 1} perPic ${(
+        //         (endTimeH - startTimeH) /
+        //         compLengthH
+        //     ).toFixed(3)}ms`;
         for (let i = 0; i < Math.ceil(compLength / onceNum); i++) {
-            const newBuffer = await sharp(outputPath).toBuffer();
-            const sharpInstance = sharp(newBuffer);
+            const sharpInstance = sharp(bufferCache);
             const sliceData = compositeInput.slice(
                 i * onceNum,
                 (i + 1) * onceNum > compLength + 1 ? compLength + 1 : (i + 1) * onceNum
             );
-            console.log(sliceData.length);
-            await sharpInstance.composite(sliceData).toFile(outputPath);
+            bufferCache = await sharpInstance.composite(sliceData).toBuffer();
+            // console.log(profilerStr(lastEndTime, Date.now(), sliceData.length, "[composite]"));
+            lastEndTime = Date.now();
         }
+        await sharp(bufferCache).toFile(outputPath);
+        const endTime = Date.now();
+        // console.log(profilerStr(startTime, endTime, compLength + 1, "[composite,toFile]"));
     }
     public async drawTerrainLayout(
         terrain: string,
@@ -84,7 +99,7 @@ export class DrawMap {
                         });
                 })
         ).filter(val => val.input);
-        await this.compositeLayout(compositeInput, outputPath, mapSize);
+        await this.compositeLayout(compositeInput, outputPath, mapSize, "[drawTerrainLayout]");
         return "ok";
     }
     private ifInBorder(x: number, y: number): boolean {
@@ -224,7 +239,7 @@ export class DrawMap {
                 else return 0;
             }
         });
-        await this.compositeLayout(compositeInput, outputPath, false);
+        await this.compositeLayout(compositeInput, outputPath, false, "[drawObjectLayout]");
     }
     public mulConst = coordUnitWidth;
     public async addSVG(svgCode: SvgCode, outputPath = "output.jpg"): Promise<void> {
@@ -239,7 +254,8 @@ export class DrawMap {
                 }
             ],
             outputPath,
-            false
+            false,
+            "[addSVG]"
         );
     }
     public async drawVisualData(dataList: SvgCode[], outputPath = "output.jpg"): Promise<void> {
@@ -253,17 +269,21 @@ export class DrawMap {
                 input: dataBufferList[index]
             };
         });
-        await this.compositeLayout(compositeDataList, outputPath, false);
+        await this.compositeLayout(compositeDataList, outputPath, false, "[drawVisualData]");
     }
     public async getVisual(
         terrain: string,
         objects: BaseObjectInfo[],
         visualDataList: SvgCode[],
+        progressBar?: SingleBar,
         outputPath = "output.jpg",
         size = [50, 50] as [number, number]
     ): Promise<void> {
         await this.drawTerrainLayout(terrain, size, outputPath);
+        progressBar?.increment(333);
         await this.drawObjectLayout(objects, outputPath);
+        progressBar?.increment(334);
         await this.drawVisualData(visualDataList, outputPath);
+        progressBar?.increment(333);
     }
 }

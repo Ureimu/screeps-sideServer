@@ -6,9 +6,14 @@ import { RoomGridMap } from "utils/RoomGridMap/RoomGridMap";
 import { apiConfig } from "../authInfo";
 import _ from "lodash";
 global._ = _;
-
+import { gridLayout } from "roomLayout/customLayout/gridLayout/layout";
 const stateHere = process.argv[2];
+console.log(stateHere, process.argv);
+process.on("unhandledRejection", error => {
+    console.log("unhandledRejection: ", error);
+});
 export const mainFunction = async (state: string): Promise<void> => {
+    console.profile();
     const api: ScreepsApi<"signinByPassword"> = new ScreepsApi(apiConfig(state));
     concurrency(4);
     console.log(state);
@@ -16,7 +21,7 @@ export const mainFunction = async (state: string): Promise<void> => {
         await correspond(api);
     } else if (state === "dev") {
         await api.auth();
-        const requireRoomNameList: string[] = ["E34S21", "E31S18", "W29N5", "W37S26", "W34N21"];
+        const requireRoomNameList: string[] = ["E34S21", "E31S18", "W29N5", "W37S26", "W34N21"]; //
         const fun = async (roomName: string) => {
             console.log(`fun: ${roomName}`);
             const basePostData = { room: roomName, shard: "shard3" };
@@ -26,8 +31,10 @@ export const mainFunction = async (state: string): Promise<void> => {
             );
             if (roomObjectData.length === 0) return;
             const map = new RoomGridMap(terrainData, roomObjectData, basePostData.room, basePostData.room);
-            a11x11(map);
-            await map.drawMap(`out/${roomName}.png`);
+            if (gridLayout(map)) {
+                await map.drawMap(`out/${roomName}.png`);
+            }
+
             // console.log(map.grid);
         };
         await Promise.all(
@@ -36,12 +43,13 @@ export const mainFunction = async (state: string): Promise<void> => {
             })
         );
     }
+    console.profileEnd();
 };
 // console.log(process.env.NODE_ENV, process.argv);
 if (stateHere === "dev" || stateHere === "private") {
     mainFunction(stateHere)
         .then(() => {
-            console.log("finish");
+            // console.log("finish");
         })
         .catch(e => {
             throw e;

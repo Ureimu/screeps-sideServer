@@ -334,7 +334,7 @@ export function createGraph(
     // ********************** Visualization
     const opacity = 0.07;
     if (visualize) {
-        console.log("visual");
+        // console.log("visual");
         for (x = bounds.xMin; x <= bounds.xMax; x++) {
             for (y = bounds.yMin; y <= bounds.yMax; y++) {
                 if (roomArray[x][y] === UNWALKABLE) {
@@ -467,7 +467,8 @@ export function getCutTiles(
         // lobal.minCut.graphingRoom = roomName;
         // global.minCut.graph=visual.export();
         // console.log("[build] 输入minCut.quit()来关闭建筑预览。")
-    } else {
+    }
+    if (positions.length === 0) {
         return [];
     }
     const wholeRoom = bounds.xMin === 0 && bounds.yMin === 0 && bounds.xMax === 49 && bounds.yMax === 49;
@@ -564,7 +565,7 @@ export function pruneDeadEnds(map: GridMap, cutTiles: Coord[]): Coord[] {
  * Example function: demonstrates how to get a min cut with 2 rectangles, which define a "to protect" area
  * @param roomName - the name of the room to use for the test, must be visible
  */
-export function getMinCut(map: GridMap, preferCloserBarriers = true): Coord[] {
+export function getMinCut(map: GridMap, visual = true, preferCloserBarriers = true): Coord[] {
     const colony = map;
     if (!colony) {
         return [];
@@ -572,29 +573,31 @@ export function getMinCut(map: GridMap, preferCloserBarriers = true): Coord[] {
     // Rectangle Array, the Rectangles will be protected by the returned tiles
     const rectArray = [];
     const padding = 3;
-    const spawns = map.layoutStructures.filter(i => i.type === "spawn");
-    for (const spawn of spawns) {
-        if (spawn) {
-            const { x, y } = spawn;
+    const baseRoads = map.layoutStructures.filter(i => i.type === "baseRoad");
+    for (const baseRoad of baseRoads) {
+        if (baseRoad) {
+            const { x, y } = baseRoad;
             const [xMin, yMin] = [Math.max(x - padding, 0), Math.max(y - padding, 0)];
             const [xMax, yMax] = [Math.min(x + padding, 49), Math.min(y + padding, 49)];
             rectArray.push({ xMin, yMin, xMax, yMax });
         }
     }
-    const sources = map.findObjects("source");
-    for (const source of sources) {
-        if (source) {
-            const { x, y } = source;
-            const [xMin, yMin] = [Math.max(x - padding, 0), Math.max(y - padding, 0)];
-            const [xMax, yMax] = [Math.min(x + padding, 49), Math.min(y + padding, 49)];
-            rectArray.push({ xMin, yMin, xMax, yMax });
-        }
-    }
+    // const sources = map.findObjects("source");
+    // const sourcePadding = 1;
+    // for (const source of sources) {
+    //     if (source) {
+    //         const { x, y } = source;
+    //         const [xMin, yMin] = [Math.max(x - sourcePadding, 0), Math.max(y - sourcePadding, 0)];
+    //         const [xMax, yMax] = [Math.min(x + sourcePadding, 49), Math.min(y + sourcePadding, 49)];
+    //         rectArray.push({ xMin, yMin, xMax, yMax });
+    //     }
+    // }
+    const controllerPadding = 1;
     const controller = map.findObjects("controller")[0];
     if (controller) {
         const { x, y } = controller;
-        const [xMin, yMin] = [Math.max(x - 3, 0), Math.max(y - 3, 0)];
-        const [xMax, yMax] = [Math.min(x + 3, 49), Math.min(y + 3, 49)];
+        const [xMin, yMin] = [Math.max(x - controllerPadding, 0), Math.max(y - controllerPadding, 0)];
+        const [xMax, yMax] = [Math.min(x + controllerPadding, 49), Math.min(y + controllerPadding, 49)];
         rectArray.push({ xMin, yMin, xMax, yMax });
     }
     const extensions = map.layoutStructures.filter(i => i.type === "extension");
@@ -609,7 +612,7 @@ export function getMinCut(map: GridMap, preferCloserBarriers = true): Coord[] {
 
     // Get Min cut
     // Positions is an array where to build walls/ramparts
-    const positions = getCutTiles(map, rectArray, preferCloserBarriers, 2, true);
+    const positions = getCutTiles(map, rectArray, preferCloserBarriers, 2, visual);
     // Test output
     // console.log('Positions returned', positions.length);
     return positions;

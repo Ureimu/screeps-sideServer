@@ -1,3 +1,4 @@
+import { Range } from "utils/common/type";
 import { PriorityQueue } from "utils/PriorityQueue/priorityQueue";
 
 import {
@@ -22,6 +23,12 @@ export class Grid {
         yMin: 1,
         xMax: 48,
         yMax: 48
+    }; // creep至少可以走到1，防止建筑被打到就只能放到大于5的位置
+    public readonly mapSize: { xMin: number; yMin: number; xMax: number; yMax: number } = {
+        xMin: 0,
+        yMin: 0,
+        xMax: 49,
+        yMax: 49
     }; // creep至少可以走到1，防止建筑被打到就只能放到大于5的位置
     public gridPos(coord: Coord): GridPosition {
         return this.grid[coord.x][coord.y];
@@ -53,9 +60,9 @@ export class Grid {
         return Math.max(Math.abs(a.x - b.x), Math.abs(a.y - b.y));
     }
 
-    public isEqual(a: Coord, b: Coord): boolean {
+    public isEqual = (a: Coord, b: Coord): boolean => {
         return a.x === b.x && a.y === b.y;
-    }
+    };
 
     private ifInBorder(coord: Coord): boolean {
         const { x, y } = coord;
@@ -135,6 +142,62 @@ export class Grid {
     }
 
     /**
+     * 获取某点周围斜正方形内的位置坐标
+     *
+     * @param {Coord} pos
+     * @param {number} range
+     * @param {boolean} [blankSpace=true]
+     * @returns {Coord[]}
+     * @memberof Grid
+     */
+    public diagSquarePos(pos: Coord, range: number, opts?: Partial<BasePosOpts>): Coord[] {
+        opts = this.managePosOpts(this.basePosOpts, opts);
+        const { x, y } = pos;
+        const coordList = [];
+        for (let i = -range; i <= range; i++) {
+            for (let j = -range; j <= range; j++) {
+                if (Math.abs(i) + Math.abs(j) > range) continue;
+                const coord = { x: x + i, y: y + j };
+                if (this.ifInBorder(coord) && !(i === 0 && j === 0)) {
+                    coordList.push(coord);
+                }
+            }
+        }
+        if (opts.ignoreWall) return coordList;
+        else {
+            return coordList.filter(coord => this.grid[coord.x][coord.y].cost < this.MAX_COST);
+        }
+    }
+
+    /**
+     * 获取某点周围空心斜正方形内的位置坐标
+     *
+     * @param {Coord} pos
+     * @param {number} range
+     * @param {boolean} [blankSpace=true]
+     * @returns {Coord[]}
+     * @memberof Grid
+     */
+    public hollowDiagSquarePos(pos: Coord, range: number, opts?: Partial<BasePosOpts>): Coord[] {
+        opts = this.managePosOpts(this.basePosOpts, opts);
+        const { x, y } = pos;
+        const coordList = [];
+        for (let i = -range; i <= range; i++) {
+            for (let j = -range; j <= range; j++) {
+                if (Math.abs(i) + Math.abs(j) !== range) continue;
+                const coord = { x: x + i, y: y + j };
+                if (this.ifInBorder(coord) && !(i === 0 && j === 0)) {
+                    coordList.push(coord);
+                }
+            }
+        }
+        if (opts.ignoreWall) return coordList;
+        else {
+            return coordList.filter(coord => this.grid[coord.x][coord.y].cost < this.MAX_COST);
+        }
+    }
+
+    /**
      * 获取某点周围和其x,y坐标之和除2的余数相等的点。
      * ```
      * Y N Y N Y
@@ -154,14 +217,14 @@ export class Grid {
         opts = this.managePosOpts(this.basePosOpts, opts);
         const { x, y } = pos;
         const coordList = [];
-        const posMod2 = (pos.x + pos.y) % 2;
+        const posMod2 = 0;
         for (let i = -range; i <= range; i++) {
             for (let j = -range; j <= range; j++) {
-                if ((i + j) % 2 !== posMod2) {
+                if (Math.abs(i + j) % 2 !== posMod2) {
                     continue;
                 }
                 const coord = { x: x + i, y: y + j };
-                if (this.ifInBorder(coord) && (i === range || j === range || i === -range || j === -range)) {
+                if (this.ifInBorder(coord)) {
                     coordList.push(coord);
                 }
             }
@@ -192,14 +255,14 @@ export class Grid {
         opts = this.managePosOpts(this.basePosOpts, opts);
         const { x, y } = pos;
         const coordList = [];
-        const posMod2 = (pos.x + pos.y) % 2;
+        const posMod2 = 1;
         for (let i = -range; i <= range; i++) {
             for (let j = -range; j <= range; j++) {
-                if ((i + j) % 2 === posMod2) {
+                if (Math.abs(i + j) % 2 !== posMod2) {
                     continue;
                 }
                 const coord = { x: x + i, y: y + j };
-                if (this.ifInBorder(coord) && (i === range || j === range || i === -range || j === -range)) {
+                if (this.ifInBorder(coord)) {
                     coordList.push(coord);
                 }
             }
@@ -217,9 +280,9 @@ export class Grid {
      * @returns {string}
      * @memberof Grid
      */
-    public posStr(pos: Coord): string {
+    public posStr = (pos: Coord): string => {
         return `${pos.x},${pos.y}`;
-    }
+    };
 
     /**
      * 编译坐标字符串为坐标
@@ -228,10 +291,10 @@ export class Grid {
      * @returns {Coord}
      * @memberof Grid
      */
-    public prasePosStr(posStr: string): Coord {
+    public prasePosStr = (posStr: string): Coord => {
         const result = posStr.split(",");
         return { x: Number(result[0]), y: Number(result[1]) };
-    }
+    };
 
     /**
      * 设置位置的移动消耗，影响寻路算法。最大为this.MAX_COST.在放置建筑之后，cost可能会改变，所以如果想为container位置设置cost，尽量在该位置添加建筑之后再改变该位置的cost
@@ -713,5 +776,71 @@ export class Grid {
             yMin: Math.min(...bestAreaYList)
         };
         return { ...range, width: range.xMax - range.xMin, height: range.yMax - range.yMin };
+    }
+
+    public static isInRect(coordList: Coord[], rect: Range): boolean {
+        return coordList.every(pos => {
+            return pos.x >= rect.xMin && pos.y >= rect.yMin && pos.x <= rect.xMax && pos.y <= rect.yMax;
+        });
+    }
+
+    public pullCoord(coordList: Coord[], coord: Coord): void {
+        let index: number;
+        do {
+            index = coordList.findIndex(a => this.isEqual(a, coord));
+            if (index !== -1) {
+                _.pullAt(coordList, index);
+            }
+        } while (index !== -1);
+    }
+    public SnakeSidePos(posList: Coord[]): [Coord[], Coord[]] {
+        if (posList.length <= 0) {
+            return [[], []];
+        }
+        let allPosList: Coord[] = [];
+        const incomeList: { [name: string]: { income: number; connectedPosList: string[] } } = {};
+        const squareSetList: [Coord[], Coord][] = [];
+        posList.forEach(coord => {
+            let squareList = this.squarePos(coord, 1); // !这里有问题。
+            squareList = _.uniq(squareList, false, this.posStr);
+            allPosList.push(...squareList);
+            allPosList = _.uniq(allPosList, false, this.posStr);
+            squareSetList.push([squareList, coord]);
+        });
+
+        posList.forEach(coord => {
+            const coordStr = this.posStr(coord);
+            incomeList[coordStr] = {
+                income: 0,
+                connectedPosList: []
+            };
+            squareSetList.forEach(squarePair => {
+                if (
+                    squarePair[0].some(a => this.isEqual(a, coord)) &&
+                    squarePair[1] !== coord &&
+                    incomeList[coordStr].connectedPosList.indexOf(coordStr) === -1
+                ) {
+                    incomeList[coordStr].income++;
+                    incomeList[coordStr].connectedPosList.push(this.posStr(squarePair[1]));
+                }
+            });
+            this.pullCoord(allPosList, coord);
+        });
+        // console.log(JSON.stringify(incomeList));
+        let exitPosList = [];
+        for (const posStr in incomeList) {
+            if (incomeList[posStr].income === 1) {
+                const centerCoord = this.prasePosStr(posStr);
+                const edgeCoord = this.prasePosStr(incomeList[posStr].connectedPosList[0]);
+                const exitCoord = { x: 2 * centerCoord.x - edgeCoord.x, y: 2 * centerCoord.y - edgeCoord.y };
+
+                // console.log(exitCoord);
+                this.pullCoord(allPosList, exitCoord);
+
+                exitPosList.push(exitCoord);
+            }
+        }
+        exitPosList = _.uniq(exitPosList, false, this.posStr);
+        return [allPosList, exitPosList];
     }
 }

@@ -1,7 +1,9 @@
 import { Range } from "utils/common/type";
+import { StructureStrMap } from "../../../utils/LayoutStr/class";
 
 export interface ModuleLayoutData {
-    layout: typedRequireData;
+    layout: string;
+    mapChar: StructureStrMap;
 }
 
 interface typedRequireData {

@@ -53,20 +53,25 @@ export class SvgCode {
         ...this.baseStyle,
         r: 0.5
     };
-    public circle(pos: Coord, style?: Partial<SvgCircleStyle>): SvgCode {
-        const { x, y } = pos;
-        const mergedStyle = _.merge(this.circleStyle, style);
-        const argList: string[] = [
-            `cx="${(x + this.offset.x) * coordUnitWidth}"`,
-            `cy="${(y + this.offset.y) * coordUnitWidth}"`,
-            `r="${mergedStyle.r * coordUnitWidth}"`
-        ];
-        Object.entries(mergedStyle).forEach(([propertyKey, value]) => {
-            if (propertyKey === "r") return;
-            argList.push(`${propertyKey}="${value}"`);
-        });
-        this.codeList.push(`<circle ${argList.join(" ")}/>`);
-        return this;
+    public circle(pos: Coord | Coord[], style?: Partial<SvgCircleStyle>): SvgCode {
+        if (_.isArray(pos)) {
+            pos.forEach(coord => this.circle(coord));
+            return this;
+        } else {
+            const { x, y } = pos;
+            const mergedStyle = _.merge(this.circleStyle, style);
+            const argList: string[] = [
+                `cx="${(x + this.offset.x) * coordUnitWidth}"`,
+                `cy="${(y + this.offset.y) * coordUnitWidth}"`,
+                `r="${mergedStyle.r * coordUnitWidth}"`
+            ];
+            Object.entries(mergedStyle).forEach(([propertyKey, value]) => {
+                if (propertyKey === "r") return;
+                argList.push(`${propertyKey}="${value}"`);
+            });
+            this.codeList.push(`<circle ${argList.join(" ")}/>`);
+            return this;
+        }
     }
     public code(): string {
         return `<svg

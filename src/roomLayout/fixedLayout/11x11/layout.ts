@@ -3,9 +3,9 @@ import { GridMap } from "utils/RoomGridMap";
 import { fixedLayout } from "../utils/fixedLayout";
 import { hohoLayout } from "./hohoLayout";
 
-export function a11x11(map: GridMap): void {
+export function a11x11(map: GridMap): boolean {
     fixedLayout(map, hohoLayout);
-    if (!map.centerPos) return;
+    if (!map.centerPos) return false;
     const centerPos = map.centerPos;
     const sources = map.findObjects("source");
     let hasPutLinkAtLevel6 = false;
@@ -32,11 +32,11 @@ export function a11x11(map: GridMap): void {
     const controllerRoadResult = map.findPath(centerPos, controller, 3);
     if (controllerRoadResult.isFinish) {
         const containerPos = controllerRoadResult.path.pop();
-        if (!containerPos) return;
+        if (!containerPos) return false;
         map.addStructure("sourceAndControllerRoad", 0, 0, ...controllerRoadResult.path);
         map.addStructure("controllerContainer", 0, 0, containerPos);
         const linkPos = map.squarePos(containerPos, 1)[0];
-        if (!linkPos) return;
+        if (!linkPos) return false;
         map.addStructure("controllerLink", 5, 10, linkPos);
         map.setCost(containerPos, map.MAX_COST / 2);
     }
@@ -45,7 +45,7 @@ export function a11x11(map: GridMap): void {
     const mineralRoadResult = map.findPath(centerPos, mineral, 1);
     if (mineralRoadResult.isFinish) {
         const containerPos = mineralRoadResult.path.pop();
-        if (!containerPos) return;
+        if (!containerPos) return false;
         map.addStructure("mineralRoad", 0, 0, ...mineralRoadResult.path);
         map.addStructure("mineralContainer", 0, 0, containerPos);
         map.setCost(containerPos, map.MAX_COST / 2);
@@ -56,4 +56,5 @@ export function a11x11(map: GridMap): void {
 
     map.centerPos = centerPos;
     // console.log(map.layoutStructures.filter(i => i.type === "rampart"));
+    return true;
 }

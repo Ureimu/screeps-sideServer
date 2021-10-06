@@ -8,7 +8,7 @@
 
 ![示例1](pic/Sample.jpg)
 
-支持类似游戏内的 visual 方法。修改并使用了 overmind 的 mincut 代码。
+支持类似游戏内的 visual 方法。下图使用了 hoho 的固定布局数据计算布局位置，修改并使用了 overmind 的 mincut 代码来计算 rampart 布局。
 ![示例2](pic/W34N21.png)
 
 ## 使用

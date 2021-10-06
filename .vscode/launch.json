@@ -9,6 +9,7 @@
                 "<node_internals>/**"
             ],
             "args": [
+                "--inspect",
                 "dev",
                 "-r",
                 "source-map-support/register",

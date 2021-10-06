@@ -1,3 +1,4 @@
+import { MultiBar, Presets } from "cli-progress";
 import {
     AnyRoomObjects,
     RoomObjectType,
@@ -13,6 +14,13 @@ import { getStructureTypeBySpecifiedName } from "./nameList";
 import { CacheLayoutData, LayoutStructure, RoomGridPosition, SpecifiedStructureNameList } from "./type";
 
 export class RoomGridMap extends Grid {
+    public static multiBar = new MultiBar(
+        {
+            clearOnComplete: false,
+            hideCursor: true
+        },
+        Presets.shades_grey
+    );
     public grid: RoomGridPosition[][] = this.grid;
     public layoutStructures: LayoutStructure[] = [];
     public visualizeDataList: SvgCode[] = [];
@@ -39,6 +47,7 @@ export class RoomGridMap extends Grid {
         swamp: this.BASE_COST * 10
     };
     private readonly roadCost = this.BASE_COST;
+    public walkableBorderPos: Coord[];
     public constructor(
         public readonly terrainData: string,
         public readonly objects: AnyRoomObjects[],
@@ -58,6 +67,13 @@ export class RoomGridMap extends Grid {
                     layout: []
                 };
             });
+        });
+        this.walkableBorderPos = this.grid.flat(1).filter(pos => {
+            if (pos.terrain !== "wall" && (pos.x === 0 || pos.y === 0 || pos.x === 49 || pos.y === 49)) {
+                return true;
+            } else {
+                return false;
+            }
         });
     }
 
@@ -90,7 +106,7 @@ export class RoomGridMap extends Grid {
                 return numList.totalLimit[index] - numList.total[index];
             }
         }
-        return 0;
+        return numList.totalLimit[level] - numList.total[level];
     }
 
     /**
@@ -139,6 +155,42 @@ export class RoomGridMap extends Grid {
             this.setCostForPos(gridPos);
         });
         return exceededNum;
+    }
+
+    public addStructureByFillingLevel(
+        type: SpecifiedStructureNameList<BuildableStructureConstant>,
+        priority: (level: ControllerLevel, index: number, pos: Coord) => number,
+        structures: Coord[]
+    ): number {
+        const coords = structures.map(coord => {
+            return { x: coord.x, y: coord.y };
+        });
+        coords.reverse();
+        let pos = coords.pop();
+        let i = 0;
+        let j = 0;
+        let k = 0;
+        // console.log(`start ${coords.length}`);
+        while (pos) {
+            const level = i as ControllerLevel;
+            const exceededNum = this.addStructure(type, level, priority(level, k, pos), pos);
+            if (exceededNum >= 0) {
+                // console.log(`put level:${i}`);
+                j++;
+            }
+            if (exceededNum < 0 && i < 8) {
+                i++;
+                // console.log(`upgrade level:${i}`);
+                continue;
+            }
+            if (i >= 8 && exceededNum < 0) break;
+
+            k++;
+            // console.log(`str num:${k}`);
+            pos = coords.pop();
+        }
+        // console.log(`end ex:${j}`);
+        return j;
     }
 
     /**
@@ -222,10 +274,13 @@ export class RoomGridMap extends Grid {
      * @memberof RoomGridMap
      */
     public async drawMap(savePath: string): Promise<void> {
+        // const progressBar = RoomGridMap.multiBar.create(1000, 0);
         await new DrawMap().getVisual(
             this.terrainData,
             [...this.objects, ...this.layoutStructures],
             this.visualizeDataList,
+            undefined,
+            // progressBar,
             savePath
         );
     }
@@ -233,6 +288,7 @@ export class RoomGridMap extends Grid {
     public rPosStr(coord: Coord): string {
         return `x${coord.x}y${coord.y}r${this.roomName}`;
     }
+    public freeSpacePosList: string[] = [];
 
     public generateLayoutData(): CacheLayoutData {
         const firstSpawn = this.layoutStructures.find(i => i.type === "spawn" && i.levelToBuild === 1);
@@ -241,7 +297,7 @@ export class RoomGridMap extends Grid {
         const data: CacheLayoutData = {
             layout: {},
             firstSpawn: { pos: this.rPosStr(firstSpawn) },
-            freeSpacePosList: [],
+            freeSpacePosList: this.freeSpacePosList,
             centerPos: this.rPosStr(this.centerPos)
         };
         this.layoutStructures.forEach(i => {
@@ -259,6 +315,20 @@ export class RoomGridMap extends Grid {
             ]);
         });
         return data;
+    }
+
+    private borderCache: { [range: number]: Coord[] } = {};
+    public isNotCloseToWalkableBorder(coordList: Coord[], range: number): boolean {
+        if (!this.borderCache[range]) {
+            this.borderCache[range] = [];
+            this.walkableBorderPos.forEach(pos => this.borderCache[range].push(...this.squarePos(pos, range)));
+            this.borderCache[range] = _.uniq(this.borderCache[range], pos => {
+                return this.posStr(pos);
+            });
+        }
+        return coordList.every(pos => {
+            return this.borderCache[range].every(borderPos => !this.isEqual(pos, borderPos));
+        });
     }
 }
 
