@@ -1,4 +1,4 @@
-import { writeFileSync } from "fs";
+import { readFileSync, writeFileSync } from "fs";
 import { Range } from "utils/common/type";
 import { Coord } from "utils/Grid/type";
 import { getMinCut } from "utils/mincut/minCut";
@@ -15,7 +15,16 @@ const filterMapPos = (map: GridMap) => {
         return xStack.map((firstSpawnPosGrid): LayoutFilterData => {
             const { x, y } = firstSpawnPosGrid;
             if (firstSpawnPosGrid.cost === map.MAX_COST || !map.isNotCloseToWalkableBorder([firstSpawnPosGrid], 5)) {
-                return { x, y, isGood: false, cost: 0, rampartNum: 0, reason: "unable to put spawn" };
+                return {
+                    x,
+                    y,
+                    isGood: false,
+                    cost: 0,
+                    rampartNum: 0,
+                    reason: "unable to put spawn",
+                    reasonNum: 0,
+                    room: map.roomName
+                };
             } else {
                 const aMap = new GridMap(map.terrainData, map.objects, map.roomName, map.name);
                 const filterData = gridBasedFirstSpawn(aMap, firstSpawnPosGrid);
@@ -23,10 +32,12 @@ const filterMapPos = (map: GridMap) => {
                     return {
                         x,
                         y,
+                        room: map.roomName,
                         isGood: true,
                         cost: filterData.cost,
                         rampartNum: filterData.rampartNum,
-                        reason: "success"
+                        reason: "success",
+                        reasonNum: 0
                     };
                 } else {
                     return {
@@ -35,28 +46,39 @@ const filterMapPos = (map: GridMap) => {
                         isGood: false,
                         cost: filterData.cost,
                         rampartNum: filterData.rampartNum,
-                        reason: filterData.reason
+                        reason: filterData.reason,
+                        reasonNum: filterData.reasonNum,
+                        room: map.roomName
                     };
                 }
             }
         });
     };
 };
-
+let hasWrittenFile = false;
 export function gridLayout(map: GridMap): boolean {
     const result = map.grid.map(filterMapPos(map)).flat(1);
     const goodResult = result.filter(({ isGood }) => isGood);
     const length = goodResult.length;
+    // 将数据写入文件
+    if (!hasWrittenFile) {
+        writeFileSync(`out/gridData.json`, JSON.stringify(result), { flag: "w" });
+        hasWrittenFile = true;
+    } else {
+        const data = JSON.parse(readFileSync(`out/gridData.json`).toString()) as LayoutFilterData[];
+        data.push(...result);
+        writeFileSync(`out/gridData.json`, JSON.stringify(data), { flag: "w" });
+    }
+
     if (length > 0) {
         goodResult.sort((a, b) => a.cost - b.cost);
         console.log(`get layout ${map.roomName}`);
         // console.log(goodResult.slice(0, 3));
         gridBasedFirstSpawn(map, goodResult[0], true);
-        writeFileSync(`out/${map.name}L.json`, JSON.stringify(result, null, 4));
+
         return true;
     } else {
         const data = result.sort((a, b) => -(a.cost - b.cost));
-        writeFileSync(`out/${map.name}L.json`, JSON.stringify(data, null, 4));
         console.log(`cannot get layout ${map.roomName}`);
         // console.log(result.flat(1).slice(0, 5));
         return false;
@@ -64,7 +86,13 @@ export function gridLayout(map: GridMap): boolean {
 }
 
 function gridBasedFirstSpawn(map: GridMap, firstSpawnPos: Coord, doLayout = false): LayoutAccessData {
-    const accessData: LayoutAccessData = { existLayout: false, cost: 0, rampartNum: 0, reason: "unknown" };
+    const accessData: LayoutAccessData = {
+        existLayout: false,
+        cost: 0,
+        rampartNum: 0,
+        reason: "unknown",
+        reasonNum: 0
+    };
 
     // console.log("add");
     map.addStructure("spawn", 1, 10, firstSpawnPos);
@@ -76,11 +104,12 @@ function gridBasedFirstSpawn(map: GridMap, firstSpawnPos: Coord, doLayout = fals
     // map.visualizeDataList.push(svg);
 
     map.posStr(firstSpawnPos);
-    const foundData = findSpace(map, firstSpawnPos, 130 + freePosNum);
+    const foundData = findSpace(map, firstSpawnPos, 108 + freePosNum);
     let { buildingExpand } = foundData;
     const { roadExpand, isExist } = foundData;
     if (!isExist) {
-        accessData.reason = `cannot find enough space, spaceNum:${buildingExpand.size}`;
+        accessData.reason = `cannot find enough space`;
+        accessData.reasonNum = buildingExpand.size;
         return accessData;
     }
     roadExpand.forEach(posStr => {
@@ -369,14 +398,15 @@ function gridBasedFirstSpawn(map: GridMap, firstSpawnPos: Coord, doLayout = fals
     });
     if (extensionPosSet.size < 60) {
         // console.log("extension位置不足，现在数量为" + extensionPosSet.size.toString());
-        accessData.reason = `extension pos not enough,num:${extensionPosSet.size}`;
+        accessData.reason = `extension pos not enough`;
+        accessData.reasonNum = extensionPosSet.size;
         return accessData;
     }
 
     map.addStructureByFillingLevel(
         "extension",
         (level, index) => level * 20 + index,
-        Array.from(extensionPosSet).map(map.prasePosStr)
+        Array.from(extensionPosSet).map(map.prasePosStr).reverse()
     );
 
     // 分配freeSpace
@@ -388,13 +418,16 @@ function gridBasedFirstSpawn(map: GridMap, firstSpawnPos: Coord, doLayout = fals
         }
     });
     if (freeSpacePosSet.size < freePosNum) {
-        accessData.reason = `freeSpacePos not enough,num:${freeSpacePosSet.size}`;
+        accessData.reason = `freeSpacePos not enough`;
+        accessData.reasonNum = freeSpacePosSet.size;
         return accessData;
     }
-    map.freeSpacePosList = Array.from(freeSpacePosSet);
+    map.freeSpacePosList = Array.from(freeSpacePosSet)
+        .map(map.prasePosStr)
+        .map(pos => map.rPosStr(pos));
     visualSet(map, freeSpacePosSet);
     // console.log(roadPos.length);
-    map.addStructure("baseRoad", 0, 0, ...Array.from(roadExpand).map(map.prasePosStr));
+    map.addStructure("baseRoad", 8, 0, ...Array.from(roadExpand).map(map.prasePosStr));
     // Array.from(roadExpand)
     //     .map(map.prasePosStr)
     //     .forEach((pos, index) => {
@@ -415,7 +448,8 @@ function gridBasedFirstSpawn(map: GridMap, firstSpawnPos: Coord, doLayout = fals
             if (result.isFinish) {
                 const containerPos = result.path.pop();
                 if (!containerPos) return false;
-                map.addStructure("sourceAndControllerRoad", 0, 0, ...result.path);
+                map.removeStructure("baseRoad", ...result.path);
+                map.addStructure("sourceAndControllerRoad", 2, 0, ...result.path);
                 map.addStructure("sourceContainer", 0, 0, containerPos);
                 const linkPos = map.squarePos(containerPos, 1).filter(pos => {
                     const posHere = map.gridPos(pos);
@@ -449,7 +483,8 @@ function gridBasedFirstSpawn(map: GridMap, firstSpawnPos: Coord, doLayout = fals
             accessData.reason = "no controller container pos";
             return accessData;
         }
-        map.addStructure("sourceAndControllerRoad", 0, 0, ...controllerRoadResult.path);
+        map.removeStructure("baseRoad", ...controllerRoadResult.path);
+        map.addStructure("sourceAndControllerRoad", 2, 0, ...controllerRoadResult.path);
         map.addStructure("controllerContainer", 0, 0, containerPos);
         const linkPos = map.squarePos(containerPos, 1).filter(pos => {
             const posHere = map.gridPos(pos);
@@ -467,7 +502,7 @@ function gridBasedFirstSpawn(map: GridMap, firstSpawnPos: Coord, doLayout = fals
         return accessData;
     }
     const mineral = map.findObjects("mineral")[0];
-    map.addStructure("extractor", 7, 1, mineral);
+    map.addStructure("extractor", 6, 1, mineral);
     const mineralRoadResult = map.findPath(centerPos, mineral, 1);
     if (mineralRoadResult.isFinish) {
         const containerPos = mineralRoadResult.path.pop();
@@ -475,8 +510,9 @@ function gridBasedFirstSpawn(map: GridMap, firstSpawnPos: Coord, doLayout = fals
             accessData.reason = "no mineral container pos";
             return accessData;
         }
-        map.addStructure("mineralRoad", 0, 0, ...mineralRoadResult.path);
-        map.addStructure("mineralContainer", 0, 0, containerPos);
+        map.removeStructure("baseRoad", ...mineralRoadResult.path);
+        map.addStructure("mineralRoad", 2, 0, ...mineralRoadResult.path);
+        map.addStructure("mineralContainer", 5, 0, containerPos);
         map.setCost(containerPos, map.MAX_COST / 2);
     } else {
         accessData.reason = "no mineral road";
@@ -497,13 +533,16 @@ interface LayoutAccessData {
     cost: number;
     rampartNum: number;
     reason: string;
+    reasonNum: number;
 }
 
 interface LayoutFilterData {
     x: number;
     y: number;
+    room: string;
     isGood: boolean;
     cost: number;
     rampartNum: number;
     reason: string;
+    reasonNum: number;
 }

@@ -1,6 +1,7 @@
 import { ScreepsApi } from "node-ts-screeps-api";
 import { CallLayoutData } from "type";
 import { RoomGridMap } from "utils/RoomGridMap/RoomGridMap";
+import { gridLayout } from "./customLayout/gridLayout/layout";
 import { a11x11 } from "./fixedLayout/11x11/layout";
 
 export async function correspond(api: ScreepsApi<"signinByPassword">): Promise<void> {
@@ -24,7 +25,7 @@ export async function correspond(api: ScreepsApi<"signinByPassword">): Promise<v
         );
         if (roomObjectData.length === 0) return;
         const map = new RoomGridMap(terrainData, roomObjectData, basePostData.room, basePostData.room);
-        a11x11(map);
+        gridLayout(map);
         await map.drawMap(`out/${roomName}.png`);
         await api.rawApi.postSegment({
             segment: callData.roomData[roomName].cacheId,
