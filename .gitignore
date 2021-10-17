@@ -5,6 +5,7 @@
 /package-lock.json
 
 # Ignore basic folders
+/cache
 /dist
 /out
 /.rpt2_cache

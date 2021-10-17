@@ -1,12 +1,12 @@
-import { ScreepsApi } from "node-ts-screeps-api";
-import { correspond } from "roomLayout/correspond";
-import { a11x11 } from "roomLayout/fixedLayout/11x11/layout";
 import { concurrency } from "sharp";
 import { RoomGridMap } from "utils/RoomGridMap/RoomGridMap";
-import { apiConfig } from "../authInfo";
+
 import _ from "lodash";
 global._ = _;
 import { gridLayout } from "roomLayout/customLayout/gridLayout/layout";
+import { checkPath } from "utils/pathCheck";
+import { getLayoutData } from "roomLayout/getData";
+import { correspond } from "roomLayout";
 const stateHere = process.argv[2];
 console.log(stateHere, process.argv);
 process.on("unhandledRejection", error => {
@@ -14,23 +14,25 @@ process.on("unhandledRejection", error => {
 });
 export const mainFunction = async (state: string): Promise<void> => {
     console.profile();
-    const api: ScreepsApi<"signinByPassword"> = new ScreepsApi(apiConfig(state));
+    checkPath(["out", "cache"]);
     concurrency(4);
     console.log(state);
     if (state === "private") {
-        await correspond(api);
+        await correspond(state);
     } else if (state === "dev") {
-        await api.auth();
         const requireRoomNameList: string[] = ["E34S21", "E31S18", "W29N5", "W37S26", "W34N21"]; //
+        const objectData = await getLayoutData(
+            state,
+            requireRoomNameList.map(roomNameHere => {
+                return { roomName: roomNameHere, shardName: "shard3" };
+            })
+        );
         const fun = async (roomName: string) => {
             console.log(`fun: ${roomName}`);
             const basePostData = { room: roomName, shard: "shard3" };
-            const terrainData = (await api.rawApi.getEncodedRoomTerrain(basePostData)).terrain[0].terrain;
-            const roomObjectData = (await api.rawApi.getRoomObjects(basePostData)).objects.filter(val =>
-                ["source", "mineral", "controller"].some(type => type === val.type)
-            );
-            if (roomObjectData.length === 0) return;
-            const map = new RoomGridMap(terrainData, roomObjectData, basePostData.room, basePostData.room);
+            const { roomObject, terrain } = objectData[roomName];
+            if (roomObject.length === 0) return;
+            const map = new RoomGridMap(terrain, roomObject, basePostData.room, basePostData.room);
             if (gridLayout(map)) {
                 await map.drawMap(`out/${roomName}.png`);
             }

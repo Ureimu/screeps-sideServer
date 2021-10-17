@@ -1,10 +1,13 @@
 import { ScreepsApi } from "node-ts-screeps-api";
 import { CallLayoutData } from "type";
 import { RoomGridMap } from "utils/RoomGridMap/RoomGridMap";
+import { apiConfig } from "../../authInfo";
 import { gridLayout } from "./customLayout/gridLayout/layout";
 import { a11x11 } from "./fixedLayout/11x11/layout";
+import { getLayoutData } from "./getData";
 
-export async function correspond(api: ScreepsApi<"signinByPassword">): Promise<void> {
+export async function correspond(state: string): Promise<void> {
+    const api = new ScreepsApi(apiConfig(state));
     await api.auth();
 
     const callDataH = await api.rawApi.getSegment({ segment: 30 });
@@ -16,13 +19,17 @@ export async function correspond(api: ScreepsApi<"signinByPassword">): Promise<v
             requireRoomNameList.push(roomName);
         }
     });
+    const objectData = await getLayoutData(
+        state,
+        requireRoomNameList.map(roomNameHere => {
+            return { roomName: roomNameHere };
+        }),
+        api
+    );
 
     const fun = async (roomName: string) => {
         const basePostData = { room: roomName };
-        const terrainData = (await api.rawApi.getEncodedRoomTerrain(basePostData)).terrain[0].terrain;
-        const roomObjectData = (await api.rawApi.getRoomObjects(basePostData)).objects.filter(val =>
-            ["source", "mineral", "controller"].some(type => type === val.type)
-        );
+        const { terrain: terrainData, roomObject: roomObjectData } = objectData[roomName];
         if (roomObjectData.length === 0) return;
         const map = new RoomGridMap(terrainData, roomObjectData, basePostData.room, basePostData.room);
         gridLayout(map);
