@@ -274,15 +274,15 @@ export class RoomGridMap extends Grid {
      * @memberof RoomGridMap
      */
     public async drawMap(savePath: string): Promise<void> {
-        // const progressBar = RoomGridMap.multiBar.create(1000, 0);
+        const progressBar = RoomGridMap.multiBar.create(1000, 0);
         await new DrawMap().getVisual(
             this.terrainData,
             [...this.objects, ...this.layoutStructures],
             this.visualizeDataList,
-            undefined,
-            // progressBar,
+            progressBar,
             savePath
         );
+        RoomGridMap.multiBar.stop();
     }
 
     public rPosStr(coord: Coord): string {

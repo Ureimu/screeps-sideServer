@@ -9,8 +9,8 @@ import { getLayoutData } from "./getData";
 export async function correspond(state: string): Promise<void> {
     const api = new ScreepsApi(apiConfig(state));
     await api.auth();
-
-    const callDataH = await api.rawApi.getSegment({ segment: 30 });
+    const shardName = "shard3";
+    const callDataH = await api.rawApi.getSegment({ segment: 30, shard: shardName });
     console.log(callDataH);
     const callData = JSON.parse(callDataH.data) as CallLayoutData;
     const requireRoomNameList: string[] = [];
@@ -22,7 +22,7 @@ export async function correspond(state: string): Promise<void> {
     const objectData = await getLayoutData(
         state,
         requireRoomNameList.map(roomNameHere => {
-            return { roomName: roomNameHere };
+            return { roomName: roomNameHere, shardName };
         }),
         api
     );
@@ -32,14 +32,18 @@ export async function correspond(state: string): Promise<void> {
         const { terrain: terrainData, roomObject: roomObjectData } = objectData[roomName];
         if (roomObjectData.length === 0) return;
         const map = new RoomGridMap(terrainData, roomObjectData, basePostData.room, basePostData.room);
-        gridLayout(map);
-        await map.drawMap(`out/${roomName}.png`);
-        await api.rawApi.postSegment({
-            segment: callData.roomData[roomName].cacheId,
-            data: JSON.stringify(map.generateLayoutData())
-        });
-        console.log(await api.rawApi.getSegment({ segment: callData.roomData[roomName].cacheId }));
-        // console.log(map.grid);
+        if (gridLayout(map)) {
+            await map.drawMap(`out/${roomName}.png`);
+            await api.rawApi.postSegment({
+                shard: shardName,
+                segment: callData.roomData[roomName].cacheId,
+                data: JSON.stringify(map.generateLayoutData())
+            });
+            console.log(
+                await api.rawApi.getSegment({ shard: shardName, segment: callData.roomData[roomName].cacheId })
+            );
+            // console.log(map.grid);
+        }
     };
     await Promise.all(
         requireRoomNameList.map(roomName => {

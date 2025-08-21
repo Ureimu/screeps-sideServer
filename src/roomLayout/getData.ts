@@ -12,9 +12,9 @@ interface LayoutData {
 export async function getLayoutData(
     state: string,
     requireRoomList: { roomName: string; shardName?: string }[],
-    screepsApi?: ScreepsApi<"signinByPassword">
+    screepsApi?: ScreepsApi<"signinByPassword" | "signinByToken">
 ): Promise<{ [name: string]: LayoutData }> {
-    let api: ScreepsApi<"signinByPassword">;
+    let api: ScreepsApi<"signinByPassword" | "signinByToken">;
     if (!screepsApi) {
         api = new ScreepsApi(apiConfig(state));
         await api.auth();
@@ -27,7 +27,9 @@ export async function getLayoutData(
         if (!existsSync(filePath)) {
             console.log(`getLayoutDataCache: ${roomName}`);
             const basePostData = { room: roomName, shard: shardName };
-            const terrainData = (await api.rawApi.getEncodedRoomTerrain(basePostData)).terrain[0].terrain;
+            const rawTerrainData = await api.rawApi.getEncodedRoomTerrain(basePostData);
+            console.log(rawTerrainData);
+            const terrainData = rawTerrainData.terrain[0].terrain;
             const roomObjectData = (await api.rawApi.getRoomObjects(basePostData)).objects.filter(val =>
                 ["source", "mineral", "controller"].some(type => type === val.type)
             );

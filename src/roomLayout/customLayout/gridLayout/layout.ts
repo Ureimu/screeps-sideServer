@@ -1,3 +1,4 @@
+import { SingleBar } from "cli-progress";
 import { readFileSync, writeFileSync } from "fs";
 import { Range } from "utils/common/type";
 import { Coord } from "utils/Grid/type";
@@ -7,12 +8,20 @@ import { RoomGridPosition } from "utils/RoomGridMap/type";
 import { SvgCode } from "utils/SvgCode";
 import { findSpace } from "./findSpace";
 
+// 如果有些房间找不到layout，可以调整下面的参数。
 const freePosNum = 8;
+const leastExtensionNum = 55; // max: 60
 const visualSet = (map: GridMap, set: Set<string>) =>
     map.visualizeDataList.push(new SvgCode(map.mapSize).circle(Array.from(set).map(map.prasePosStr)));
 const filterMapPos = (map: GridMap) => {
+    const bar = new SingleBar({});
+    bar.start(2500, 0);
+    let sum = 0;
     return (xStack: RoomGridPosition[]) => {
         return xStack.map((firstSpawnPosGrid): LayoutFilterData => {
+            bar.increment(1);
+            sum++;
+            if (sum === 2500) bar.stop();
             const { x, y } = firstSpawnPosGrid;
             if (firstSpawnPosGrid.cost === map.MAX_COST || !map.isNotCloseToWalkableBorder([firstSpawnPosGrid], 5)) {
                 return {
@@ -97,11 +106,8 @@ function gridBasedFirstSpawn(map: GridMap, firstSpawnPos: Coord, doLayout = fals
     // console.log("add");
     map.addStructure("spawn", 1, 10, firstSpawnPos);
     // console.log(map.mod2notEqualPos(firstSpawnPos, 1).map(map.posStr));
-    // const svg = new SvgCode(map.mapSize).circle(firstSpawnPos);
-    // map.mod2notEqualPos(firstSpawnPos, 1).forEach((pos, index) => {
-    //     svg.text(`${index}`, pos, { fill: "yellow" });
-    // });
-    // map.visualizeDataList.push(svg);
+    const svg = new SvgCode(map.mapSize).circle(firstSpawnPos).text(`F`, firstSpawnPos, { fill: "yellow" });
+    map.visualizeDataList.push(svg);
 
     map.posStr(firstSpawnPos);
     const foundData = findSpace(map, firstSpawnPos, 108 + freePosNum);
@@ -191,7 +197,6 @@ function gridBasedFirstSpawn(map: GridMap, firstSpawnPos: Coord, doLayout = fals
 
     const [obPosStr] = obSet;
     map.addStructure("observer", 8, 10, map.prasePosStr(obPosStr));
-
     // buildingExpandPowerSpawn = new Set<string>(Array.from(buildingExpandPowerSpawn).reverse());
     const powerSpawnSet = new Set<string>();
     const nukerSet = new Set<string>();
@@ -350,7 +355,7 @@ function gridBasedFirstSpawn(map: GridMap, firstSpawnPos: Coord, doLayout = fals
     // 去掉多余的building位置以及旁边的路
     // console.log(buildingExpand.size);
     originList.forEach(posStr => {
-        if (fullBuildingExpand.size > 60 + 6 + freePosNum + 1) {
+        if (fullBuildingExpand.size > leastExtensionNum + 6 + freePosNum + 1) {
             if (!diagExWithRoadSet.has(posStr)) {
                 fullBuildingExpand.delete(posStr);
                 buildingExpand.delete(posStr);
@@ -391,12 +396,12 @@ function gridBasedFirstSpawn(map: GridMap, firstSpawnPos: Coord, doLayout = fals
     // 分配extension位置
     const extensionPosSet = new Set<string>();
     buildingExpand.forEach(posStr => {
-        if (extensionPosSet.size < 60) {
+        if (extensionPosSet.size < leastExtensionNum) {
             buildingExpand.delete(posStr);
             extensionPosSet.add(posStr);
         }
     });
-    if (extensionPosSet.size < 60) {
+    if (extensionPosSet.size < leastExtensionNum) {
         // console.log("extension位置不足，现在数量为" + extensionPosSet.size.toString());
         accessData.reason = `extension pos not enough`;
         accessData.reasonNum = extensionPosSet.size;

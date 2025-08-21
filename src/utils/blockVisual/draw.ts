@@ -279,11 +279,13 @@ export class DrawMap {
         outputPath = "output.jpg",
         size = [50, 50] as [number, number]
     ): Promise<void> {
+        progressBar?.setTotal(2500 + objects.length + visualDataList.length);
         await this.drawTerrainLayout(terrain, size, outputPath);
-        progressBar?.increment(333);
+        progressBar?.increment(2500);
         await this.drawObjectLayout(objects, outputPath);
-        progressBar?.increment(334);
+        progressBar?.increment(objects.length);
         await this.drawVisualData(visualDataList, outputPath);
-        progressBar?.increment(333);
+        progressBar?.increment(visualDataList.length);
+        progressBar?.stop();
     }
 }

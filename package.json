@@ -8,6 +8,8 @@
         "devTestIns": "rollup -c && node --inspect -r source-map-support/register dist/main.js dev",
         "devTest": "rollup -c && node -r source-map-support/register dist/main.js dev",
         "privateTest": "rollup -c && node -r source-map-support/register dist/main.js private",
+        "ureium": "rollup -c && node -r source-map-support/register dist/main.js ureium",
+        "moreOneNight": "rollup -c && node -r source-map-support/register dist/main.js moreOneNight",
         "lint": "eslint \"src/**/*.ts\"",
         "build": "rollup -c",
         "test": "npm run test-unit & npm run test-integration",
