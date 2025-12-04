@@ -28,3 +28,17 @@ npm run test
 ```
 
 进行测试。
+
+## 用于自动化布局
+
+使用npm run devTest文件来查看特定地图的布局，可用于游戏起始布局时查看第一个spawn的位置。
+
+参照 authInfoSample.ts 写 authInfo.ts 文件之后，使用
+
+```
+rollup -c && node -r source-map-support/register dist/main.js YOUR_INFO_NAME
+```
+
+来运行自动化脚本生成布局数据并传输到对应SegmentMemory。
+
+YOUR_INFO_NAME为你authInfo里写的配置项名字。

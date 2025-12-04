@@ -12,6 +12,9 @@ import { Coord, GridPosition } from "utils/Grid/type";
 import { SvgCode } from "utils/SvgCode";
 import { getStructureTypeBySpecifiedName } from "./nameList";
 import { CacheLayoutData, LayoutStructure, RoomGridPosition, SpecifiedStructureNameList } from "./type";
+// added imports to create directories if needed
+import { promises as fs } from "fs";
+import * as path from "path";
 
 export class RoomGridMap extends Grid {
     public static multiBar = new MultiBar(
@@ -275,6 +278,18 @@ export class RoomGridMap extends Grid {
      */
     public async drawMap(savePath: string): Promise<void> {
         const progressBar = RoomGridMap.multiBar.create(1000, 0);
+
+        // Ensure the directory for savePath exists; create it if missing.
+        try {
+            const dir = path.dirname(savePath);
+            if (dir && dir !== ".") {
+                await fs.mkdir(dir, { recursive: true });
+            }
+        } catch (err) {
+            // Propagate directory creation errors
+            throw err;
+        }
+
         await new DrawMap().getVisual(
             this.terrainData,
             [...this.objects, ...this.layoutStructures],

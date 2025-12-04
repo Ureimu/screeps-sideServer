@@ -78,7 +78,7 @@ export class Grid {
         if (!opts) {
             return _.cloneDeep(defaultOpts);
         } else {
-            return _.assign(_.cloneDeep(defaultOpts), opts);
+            return _.assign(_.cloneDeep(defaultOpts) as {}, opts) as Exclude<T, undefined>;
         }
     }
 
