@@ -1,13 +1,17 @@
 import { Coord } from "utils/Grid/type";
 import { GridMap } from "utils/RoomGridMap";
 
+// 返回的freeSpacePos数量可能不够，需要自己从buildingExpand位置取一些，或者把buildingExpand不需要的位置记录一下。
 export function findSpace(
     map: GridMap,
     firstSpawnPos: Coord,
-    posNum: number
-): { buildingExpand: Set<string>; roadExpand: Set<string>; isExist: boolean } {
+    buildingPosNum: number,
+    freeSpacePosNum: number
+): { buildingExpand: Set<string>; roadExpand: Set<string>; freeSpaceExpand: Set<string>; isExist: boolean } {
     const buildingExpand = new Set([map.posStr(firstSpawnPos)]);
     const roadExpand = new Set(map.mod2notEqualPos(firstSpawnPos, 1).map(map.posStr));
+    // 建筑和路旁的空位。
+    const fullFreeSpaceExpand = new Set<string>();
     let ifNotEnough = true;
     let num = 0;
     while (ifNotEnough) {
@@ -88,10 +92,10 @@ export function findSpace(
         if (buildingExpand.size === num) {
             // console.log(num, m);
             // console.log("无法在此位置寻找到合适布局。");
-            return { buildingExpand, roadExpand, isExist: false };
+            return { buildingExpand, roadExpand, freeSpaceExpand: fullFreeSpaceExpand, isExist: false };
         }
         num = buildingExpand.size;
-        if (posNum <= buildingExpand.size) {
+        if (buildingPosNum <= buildingExpand.size) {
             ifNotEnough = false;
         }
     }
@@ -99,5 +103,32 @@ export function findSpace(
     map.mod2notEqualPos(firstSpawnPos, 1)
         .map(map.posStr)
         .forEach(str => roadExpand.add(str));
-    return { buildingExpand, roadExpand, isExist: true };
+
+    // 将所有路周围，不属于roadExpand和buildingExpand的位置加入
+    for (const roadPosStr of roadExpand) {
+        const roadPos = map.prasePosStr(roadPosStr);
+        const nearbyPosList = map.hollowSquarePos(roadPos, 1, {
+            ignoreBorderLimit: false,
+            ignoreStructure: false,
+            ignoreWall: false
+        });
+        nearbyPosList.forEach(nearbyPos => {
+            const nearbyPosStr = map.posStr(nearbyPos);
+            if (!roadExpand.has(nearbyPosStr) && !buildingExpand.has(nearbyPosStr)) {
+                fullFreeSpaceExpand.add(nearbyPosStr);
+            }
+        });
+    }
+    const freeSpaceExpandArray = Array.from(fullFreeSpaceExpand.values())
+        .map(i => map.prasePosStr(i))
+        .filter(i => map.getDistance(i, firstSpawnPos) <= 8)
+        .sort((a, b) => map.getDistance(firstSpawnPos, a) - map.getDistance(firstSpawnPos, b))
+        .map(i => map.posStr(i));
+
+    if (freeSpaceExpandArray.length >= freeSpacePosNum) {
+        freeSpaceExpandArray.splice(freeSpacePosNum);
+    }
+
+    const freeSpaceExpand = new Set(freeSpaceExpandArray);
+    return { buildingExpand, roadExpand, freeSpaceExpand, isExist: true };
 }

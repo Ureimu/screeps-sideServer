@@ -110,9 +110,9 @@ function gridBasedFirstSpawn(map: GridMap, firstSpawnPos: Coord, doLayout = fals
     map.visualizeDataList.push(svg);
 
     map.posStr(firstSpawnPos);
-    const foundData = findSpace(map, firstSpawnPos, 108 + freePosNum);
+    const foundData = findSpace(map, firstSpawnPos, 108, freePosNum);
     let { buildingExpand } = foundData;
-    const { roadExpand, isExist } = foundData;
+    const { roadExpand, freeSpaceExpand, isExist } = foundData;
     if (!isExist) {
         accessData.reason = `cannot find enough space`;
         accessData.reasonNum = buildingExpand.size;
@@ -351,7 +351,7 @@ function gridBasedFirstSpawn(map: GridMap, firstSpawnPos: Coord, doLayout = fals
         });
     });
     const originList = Array.from(buildingExpand).reverse();
-    buildingExpand = new Set<string>(diagExWithRoadList.concat(Array.from(buildingExpand).reverse()));
+    buildingExpand = new Set<string>(diagExWithRoadList.concat(Array.from(buildingExpand)));
     // 去掉多余的building位置以及旁边的路
     // console.log(buildingExpand.size);
     originList.forEach(posStr => {
@@ -359,6 +359,7 @@ function gridBasedFirstSpawn(map: GridMap, firstSpawnPos: Coord, doLayout = fals
             if (!diagExWithRoadSet.has(posStr)) {
                 fullBuildingExpand.delete(posStr);
                 buildingExpand.delete(posStr);
+                freeSpaceExpand.add(posStr);
             }
         }
     });
@@ -393,6 +394,42 @@ function gridBasedFirstSpawn(map: GridMap, firstSpawnPos: Coord, doLayout = fals
     });
     map.addStructureByFillingLevel("tower", () => 0, Array.from(towerSet).map(map.prasePosStr));
 
+    // 分配freeSpace
+
+    const freeSpacePosSet = new Set<string>();
+    freeSpaceExpand.forEach(posStr => {
+        if (freeSpacePosSet.size < freePosNum) {
+            if (map.getDistance(map.prasePosStr(posStr), storagePos) < 5) {
+                freeSpaceExpand.delete(posStr);
+                freeSpacePosSet.add(posStr);
+            }
+        }
+    });
+    buildingExpand.forEach(posStr => {
+        if (freeSpacePosSet.size < freePosNum) {
+            buildingExpand.delete(posStr);
+            freeSpacePosSet.add(posStr);
+        }
+    });
+    if (freeSpacePosSet.size < freePosNum) {
+        accessData.reason = `freeSpacePos not enough`;
+        accessData.reasonNum = freeSpacePosSet.size;
+        return accessData;
+    }
+
+    Array.from(freeSpacePosSet)
+        .map(map.prasePosStr)
+        .forEach(i => {
+            map.setCost(i, map.MAX_COST / 2);
+        });
+
+    map.freeSpacePosList = Array.from(freeSpacePosSet)
+        .map(map.prasePosStr)
+        .map(pos => map.rPosStr(pos));
+    visualSet(map, freeSpacePosSet);
+
+    // console.log(roadPos.length);
+
     // 分配extension位置
     const extensionPosSet = new Set<string>();
     buildingExpand.forEach(posStr => {
@@ -414,24 +451,6 @@ function gridBasedFirstSpawn(map: GridMap, firstSpawnPos: Coord, doLayout = fals
         Array.from(extensionPosSet).map(map.prasePosStr).reverse()
     );
 
-    // 分配freeSpace
-    const freeSpacePosSet = new Set<string>();
-    buildingExpand.forEach(posStr => {
-        if (freeSpacePosSet.size < freePosNum) {
-            buildingExpand.delete(posStr);
-            freeSpacePosSet.add(posStr);
-        }
-    });
-    if (freeSpacePosSet.size < freePosNum) {
-        accessData.reason = `freeSpacePos not enough`;
-        accessData.reasonNum = freeSpacePosSet.size;
-        return accessData;
-    }
-    map.freeSpacePosList = Array.from(freeSpacePosSet)
-        .map(map.prasePosStr)
-        .map(pos => map.rPosStr(pos));
-    visualSet(map, freeSpacePosSet);
-    // console.log(roadPos.length);
     map.addStructure("baseRoad", 8, 0, ...Array.from(roadExpand).map(map.prasePosStr));
     // Array.from(roadExpand)
     //     .map(map.prasePosStr)
