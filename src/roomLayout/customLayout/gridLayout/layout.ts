@@ -106,7 +106,7 @@ function gridBasedFirstSpawn(map: GridMap, firstSpawnPos: Coord, doLayout = fals
     // console.log("add");
     map.addStructure("spawn", 1, 10, firstSpawnPos);
     // console.log(map.mod2notEqualPos(firstSpawnPos, 1).map(map.posStr));
-    const svg = new SvgCode(map.mapSize).circle(firstSpawnPos).text(`F`, firstSpawnPos, { fill: "yellow" });
+    const svg = new SvgCode(map.mapSize).circle(firstSpawnPos).text(`F`, firstSpawnPos, { fill: "blue", opacity: 1 });
     map.visualizeDataList.push(svg);
 
     map.posStr(firstSpawnPos);
@@ -351,7 +351,7 @@ function gridBasedFirstSpawn(map: GridMap, firstSpawnPos: Coord, doLayout = fals
         });
     });
     const originList = Array.from(buildingExpand).reverse();
-    buildingExpand = new Set<string>(diagExWithRoadList.concat(Array.from(buildingExpand)));
+    buildingExpand = new Set<string>(Array.from(buildingExpand).concat(diagExWithRoadList));
     // 去掉多余的building位置以及旁边的路
     // console.log(buildingExpand.size);
     originList.forEach(posStr => {
@@ -445,11 +445,15 @@ function gridBasedFirstSpawn(map: GridMap, firstSpawnPos: Coord, doLayout = fals
         return accessData;
     }
 
-    map.addStructureByFillingLevel(
-        "extension",
-        (level, index) => level * 20 + index,
-        Array.from(extensionPosSet).map(map.prasePosStr).reverse()
-    );
+    const extensionPosList = Array.from(extensionPosSet).map(map.prasePosStr);
+
+    map.addStructureByFillingLevel("extension", (level, index) => level * 20 + index, extensionPosList);
+
+    const exSvg = new SvgCode(map.mapSize);
+    map.layoutStructures
+        .filter(i => i.type === "extension")
+        .map(extension => exSvg.text(`${extension.levelToBuild}`, extension, { fill: "blue", opacity: 1 }));
+    map.visualizeDataList.push(exSvg);
 
     map.addStructure("baseRoad", 8, 0, ...Array.from(roadExpand).map(map.prasePosStr));
     // Array.from(roadExpand)

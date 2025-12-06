@@ -19,6 +19,7 @@ export class SvgCode {
         ry: 0
     };
     public offset: Coord = { x: 0.5, y: 0.5 };
+    public textOffset: Coord = { x: -0.25, y: -0.25 };
     public rect(range: Range, style?: Partial<SvgRectStyle>): SvgCode {
         const mergedStyle = _.merge(this.rectStyle, style);
         const argList: string[] = [
@@ -37,12 +38,16 @@ export class SvgCode {
         ...this.baseStyle,
         fill: "white",
         stroke: "white",
-        "font-size": coordUnitWidth
+        "font-size": Math.round(coordUnitWidth * 0.75)
     };
     public text(text: string, pos: Coord, style?: Partial<SvgTextStyle>): SvgCode {
         const { x, y } = pos;
         const mergedStyle = _.merge(this.textStyle, style);
-        const argList: string[] = [`x="${x * coordUnitWidth}"`, `y="${y * coordUnitWidth + mergedStyle["font-size"]}"`];
+        const fontSize = mergedStyle["font-size"];
+        const argList: string[] = [
+            `x="${(x + this.offset.x) * coordUnitWidth + this.textOffset.x * fontSize}"`,
+            `y="${(y + this.offset.y) * coordUnitWidth + this.textOffset.y * fontSize + fontSize / 2}"`
+        ];
         Object.entries(mergedStyle).forEach(([propertyKey, value]) => {
             argList.push(`${propertyKey}="${value}"`);
         });
