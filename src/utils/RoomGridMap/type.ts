@@ -55,6 +55,7 @@ export interface CacheLayoutData {
     };
     centerPos: string;
     freeSpacePosList: string[];
+    upgraderPosList: string[];
 }
 
 export type StructureTypeFromSpecifiedStructureName<T extends SpecifiedStructureNameList<StructureConstant>> =

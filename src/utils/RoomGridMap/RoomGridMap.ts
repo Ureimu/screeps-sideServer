@@ -35,6 +35,8 @@ export class RoomGridMap extends Grid {
             totalLimit: { [level in ControllerLevel]: number };
         };
     } = {};
+    public freeSpacePosList: string[] = [];
+    public upgraderPosList: string[] = [];
     public gridPos(coord: Coord): RoomGridPosition {
         return this.grid[coord.x][coord.y];
     }
@@ -303,7 +305,6 @@ export class RoomGridMap extends Grid {
     public rPosStr(coord: Coord): string {
         return `x${coord.x}y${coord.y}r${this.roomName}`;
     }
-    public freeSpacePosList: string[] = [];
 
     public generateLayoutData(): CacheLayoutData {
         const firstSpawn = this.layoutStructures.find(i => i.type === "spawn" && i.levelToBuild === 1);
@@ -313,6 +314,7 @@ export class RoomGridMap extends Grid {
             layout: {},
             firstSpawn: { pos: this.rPosStr(firstSpawn) },
             freeSpacePosList: this.freeSpacePosList,
+            upgraderPosList: this.upgraderPosList,
             centerPos: this.rPosStr(this.centerPos)
         };
         this.layoutStructures.forEach(i => {

@@ -6,7 +6,7 @@ import { calcFillEnergyOrder } from "fillEnergyOrder";
 import { saveDataFile } from "utils/saveDataFile";
 
 export async function devTest(state: string): Promise<void> {
-    const requireRoomNameList: string[] = ["W9N11", "W15N11", "W19N13", "W19N15", "W25N11"]; //
+    const requireRoomNameList: string[] = ["E1N11", "W9N11", "W2N11"]; //
     const shardName = "shard3";
     const config = apiConfig(state);
     const objectData = await getLayoutData(

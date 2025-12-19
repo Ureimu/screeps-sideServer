@@ -11,8 +11,8 @@ import { findSpace } from "./findSpace";
 // 如果有些房间找不到layout，可以调整下面的参数。
 const freePosNum = 8;
 const leastExtensionNum = 55; // max: 60
-const visualSet = (map: GridMap, set: Set<string>) =>
-    map.visualizeDataList.push(new SvgCode(map.mapSize).circle(Array.from(set).map(map.prasePosStr)));
+const visualSet = (map: GridMap, set: Set<string>, color: string) =>
+    map.visualizeDataList.push(new SvgCode(map.mapSize).circle(Array.from(set).map(map.prasePosStr), { fill: color }));
 const filterMapPos = (map: GridMap) => {
     const bar = new SingleBar({});
     bar.start(2500, 0);
@@ -420,13 +420,13 @@ function gridBasedFirstSpawn(map: GridMap, firstSpawnPos: Coord, doLayout = fals
     Array.from(freeSpacePosSet)
         .map(map.prasePosStr)
         .forEach(i => {
-            map.setCost(i, map.MAX_COST / 2);
+            map.setCost(i, map.MAX_COST);
         });
 
     map.freeSpacePosList = Array.from(freeSpacePosSet)
         .map(map.prasePosStr)
         .map(pos => map.rPosStr(pos));
-    visualSet(map, freeSpacePosSet);
+    visualSet(map, freeSpacePosSet, "rgba(0,0,255,15)");
 
     // console.log(roadPos.length);
 
@@ -503,32 +503,7 @@ function gridBasedFirstSpawn(map: GridMap, firstSpawnPos: Coord, doLayout = fals
         accessData.reason = "no source container or link pos";
         return accessData;
     }
-    const controller = map.findObjects("controller")[0];
-    const controllerRoadResult = map.findPath(centerPos, controller, 3);
-    if (controllerRoadResult.isFinish) {
-        const containerPos = controllerRoadResult.path.pop();
-        if (!containerPos) {
-            accessData.reason = "no controller container pos";
-            return accessData;
-        }
-        map.removeStructure("baseRoad", ...controllerRoadResult.path);
-        map.addStructure("sourceAndControllerRoad", 2, 0, ...controllerRoadResult.path);
-        map.addStructure("controllerContainer", 0, 0, containerPos);
-        const linkPos = map.squarePos(containerPos, 1).filter(pos => {
-            const posHere = map.gridPos(pos);
-            if (posHere.layout.length === 0 && posHere.terrain !== "wall") return true;
-            else return false;
-        })[0];
-        if (!linkPos) {
-            accessData.reason = "no controller link pos";
-            return accessData;
-        }
-        map.addStructure("controllerLink", 5, 10, linkPos);
-        map.setCost(containerPos, map.MAX_COST / 2);
-    } else {
-        accessData.reason = "no controller road";
-        return accessData;
-    }
+
     const mineral = map.findObjects("mineral")[0];
     map.addStructure("extractor", 6, 1, mineral);
     const mineralRoadResult = map.findPath(centerPos, mineral, 1);
@@ -546,6 +521,71 @@ function gridBasedFirstSpawn(map: GridMap, firstSpawnPos: Coord, doLayout = fals
         accessData.reason = "no mineral road";
         return accessData;
     }
+
+    const controller = map.findObjects("controller")[0];
+
+    // 依次选择以range:2为中心，以1,3为中心，以4为中心的list，寻找最优的解。
+    // 如果以2为中心的解的格数小于6，就把以1,3为中心的纳入计算，
+    // 如果以1,2,3为中心的解的格数小于4，就把以4为中心的纳入计算，
+    const possibleControllerLinkPosList: Coord[] = [];
+    const possibleUpgradeLayoutList: Coord[][] = [];
+    let controllerLinkPos: Coord;
+    let upgraderPosList: Coord[];
+    {
+        const LH2 = map.hollowSquarePos(controller, 2);
+        possibleControllerLinkPosList.push(...LH2);
+        possibleUpgradeLayoutList.push(...LH2.map(pos => map.hollowSquarePos(pos, 1)));
+        if (possibleUpgradeLayoutList.reduce((last, now) => (last > now.length ? last : now.length), 0) < 6) {
+            const LH13 = [...map.hollowSquarePos(controller, 1), ...map.hollowSquarePos(controller, 3)];
+            possibleControllerLinkPosList.push(...LH13);
+            possibleUpgradeLayoutList.push(...LH13.map(pos => map.hollowSquarePos(pos, 1)));
+            if (possibleUpgradeLayoutList.reduce((last, now) => (last > now.length ? last : now.length), 0) < 4) {
+                const LH4 = map.hollowSquarePos(controller, 4);
+                possibleControllerLinkPosList.push(...LH4);
+                possibleUpgradeLayoutList.push(...LH4.map(pos => map.hollowSquarePos(pos, 1)));
+            }
+        }
+        const maxPosCount = possibleUpgradeLayoutList.reduce((last, now) => (last > now.length ? last : now.length), 0);
+        if (maxPosCount <= 2) {
+            accessData.reason = "no controller upgrade area pos";
+            return accessData;
+        }
+        controllerLinkPos = possibleControllerLinkPosList
+            .filter((pos, index) => possibleUpgradeLayoutList[index].length === maxPosCount)
+            .map(pos => [pos, map.findPath(centerPos, pos, 1)] as const)
+            .filter(i => i[1].isFinish)
+            .reduce((last, now) => (last[1].path.length < now[1].path.length ? last : now))[0];
+        upgraderPosList = map.hollowSquarePos(controllerLinkPos, 1);
+    }
+
+    map.upgraderPosList = upgraderPosList.map(pos => map.rPosStr(pos));
+    const upgraderPosSet = new Set(upgraderPosList.map(pos => map.posStr(pos)));
+    visualSet(map, upgraderPosSet, "rgba(255,150,150,25)");
+
+    const controllerRoadResult = map.findPath(centerPos, controllerLinkPos, 1);
+    if (!controllerRoadResult.isFinish) {
+        accessData.reason = "no controller road";
+        return accessData;
+    }
+
+    const containerPos = controllerRoadResult.path.pop();
+    if (!containerPos) {
+        accessData.reason = "no controller container pos";
+        return accessData;
+    }
+    map.removeStructure("baseRoad", ...controllerRoadResult.path);
+    map.addStructure("sourceAndControllerRoad", 2, 0, ...controllerRoadResult.path);
+    map.addStructure("controllerContainer", 0, 0, containerPos);
+    map.addStructure("controllerLink", 5, 10, controllerLinkPos);
+    map.setCost(containerPos, map.MAX_COST / 2);
+
+    // 设为map.MAX_COST后该位置会被视为建筑。
+    // 所以等controllerRoad寻路使用完毕后，再设置这里。
+    Array.from(upgraderPosSet)
+        .map(map.prasePosStr)
+        .forEach(i => {
+            map.setCost(i, map.MAX_COST);
+        });
 
     const rampartPos = getMinCut(map, false);
     // console.log(rampartPos.length);

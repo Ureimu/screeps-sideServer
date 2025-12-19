@@ -21,7 +21,7 @@ export class SvgCode {
     public offset: Coord = { x: 0.5, y: 0.5 };
     public textOffset: Coord = { x: -0.25, y: -0.25 };
     public rect(range: Range, style?: Partial<SvgRectStyle>): SvgCode {
-        const mergedStyle = _.merge(this.rectStyle, style);
+        const mergedStyle = _.merge(_.clone(this.rectStyle), style);
         const argList: string[] = [
             `x="${range.xMin * coordUnitWidth}"`,
             `y="${range.yMin * coordUnitWidth}"`,
@@ -42,7 +42,7 @@ export class SvgCode {
     };
     public text(text: string, pos: Coord, style?: Partial<SvgTextStyle>): SvgCode {
         const { x, y } = pos;
-        const mergedStyle = _.merge(this.textStyle, style);
+        const mergedStyle = _.merge(_.clone(this.textStyle), style);
         const fontSize = mergedStyle["font-size"];
         const argList: string[] = [
             `x="${(x + this.offset.x) * coordUnitWidth + this.textOffset.x * fontSize}"`,
@@ -64,7 +64,7 @@ export class SvgCode {
             return this;
         } else {
             const { x, y } = pos;
-            const mergedStyle = _.merge(this.circleStyle, style);
+            const mergedStyle = _.merge(_.clone(this.circleStyle), style);
             const argList: string[] = [
                 `cx="${(x + this.offset.x) * coordUnitWidth}"`,
                 `cy="${(y + this.offset.y) * coordUnitWidth}"`,
