@@ -11,9 +11,34 @@ export async function correspond(state: string): Promise<void> {
     const config = apiConfig(state);
     const api = new ScreepsApi(config);
     await api.auth();
-    const shardName = "shard3";
+
+    const userInfo = await api.rawApi.me();
+    console.log(userInfo);
+    if (userInfo.cpuShard) {
+        // 官服
+        Object.entries(userInfo.cpuShard).forEach(async ([shardName, cpuMax]) => {
+            if (cpuMax <= 0) return;
+            console.log(`running layout for ${shardName}`);
+            runLayoutForShard(state, api, shardName);
+        });
+    } else {
+        // 私服
+        runLayoutForShard(state, api);
+    }
+}
+
+async function runLayoutForShard(
+    state: string,
+    api: ScreepsApi<"signinByPassword" | "signinByToken">,
+    shardName?: string
+) {
+    const config = apiConfig(state);
     const callDataH = await api.rawApi.getSegment({ segment: 30, shard: shardName });
     console.log(callDataH);
+    if (!callDataH.data) {
+        console.log("no data");
+        return;
+    }
     const callData = JSON.parse(callDataH.data) as CallLayoutData;
     const requireRoomNameList: string[] = [];
     Object.values(callData.roomData).forEach(({ cacheId, roomName, hasGotData }) => {
@@ -44,7 +69,10 @@ export async function correspond(state: string): Promise<void> {
                 data: data
             });
             console.log(
-                await api.rawApi.getSegment({ shard: shardName, segment: callData.roomData[roomName].cacheId })
+                await api.rawApi.getSegment({
+                    shard: shardName,
+                    segment: callData.roomData[roomName].cacheId
+                })
             );
             // console.log(map.grid);
         }

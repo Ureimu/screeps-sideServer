@@ -5,9 +5,13 @@ import { apiConfig } from "../../authInfo";
 import { calcFillEnergyOrder } from "fillEnergyOrder";
 import { saveDataFile } from "utils/saveDataFile";
 
-export async function devTest(state: string): Promise<void> {
-    const requireRoomNameList: string[] = ["E1N11", "W9N11", "W2N11"]; //
-    const shardName = "shard3";
+export async function devTest(): Promise<void> {
+    // const state = "ureium";
+    // const requireRoomNameList: string[] = ["E1N11", "W9N11", "W2N11"]; //
+    // const shardName = "shard3";
+    const state = "private";
+    const requireRoomNameList: string[] = ["W1N1"];
+    const shardName = "e4d6ef922e98";
     const config = apiConfig(state);
     const objectData = await getLayoutData(
         state,
@@ -17,7 +21,7 @@ export async function devTest(state: string): Promise<void> {
     );
     const fun = async (roomName: string) => {
         console.log(`fun: ${roomName}`);
-        const basePostData = { room: roomName, shard: shardName };
+        const basePostData = { room: roomName };
         const { roomObject, terrain } = objectData[roomName];
         if (roomObject.length === 0) return;
         const map = new RoomGridMap(terrain, roomObject, basePostData.room, basePostData.room);
