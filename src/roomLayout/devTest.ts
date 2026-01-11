@@ -2,8 +2,7 @@ import { RoomGridMap } from "utils/RoomGridMap/RoomGridMap";
 import { gridLayout } from "./customLayout/gridLayout/layout";
 import { getLayoutData } from "./getData";
 import { apiConfig } from "../../authInfo";
-import { calcFillEnergyOrder } from "fillEnergyOrder";
-import { saveDataFile } from "utils/saveDataFile";
+import { saveFile } from "utils/FileUtils";
 
 export async function devTest(): Promise<void> {
     // const state = "ureium";
@@ -27,9 +26,8 @@ export async function devTest(): Promise<void> {
         const map = new RoomGridMap(terrain, roomObject, basePostData.room, basePostData.room);
         if (gridLayout(map)) {
             const data = JSON.stringify(map.generateLayoutData());
-            await saveDataFile(data, `out/${config.hostInfo.hostname}/${shardName}/${roomName}.txt`);
+            await saveFile(data, `out/${config.hostInfo.hostname}/${shardName}/${roomName}.txt`);
             await map.drawMap(`out/${config.hostInfo.hostname}/${shardName}/${roomName}.png`);
-            calcFillEnergyOrder(map);
         }
 
         // console.log(map.grid);

@@ -5,7 +5,7 @@ import { apiConfig } from "../../authInfo";
 import { gridLayout } from "./customLayout/gridLayout/layout";
 import { a11x11 } from "./fixedLayout/11x11/layout";
 import { getLayoutData } from "./getData";
-import { saveDataFile } from "utils/saveDataFile";
+import { saveFile } from "utils/FileUtils";
 
 export async function correspond(state: string): Promise<void> {
     const config = apiConfig(state);
@@ -61,7 +61,7 @@ async function runLayoutForShard(
         const map = new RoomGridMap(terrainData, roomObjectData, basePostData.room, basePostData.room);
         if (gridLayout(map)) {
             const data = JSON.stringify(map.generateLayoutData());
-            await saveDataFile(data, `out/${config.hostInfo.hostname}/${shardName}/${roomName}.txt`);
+            await saveFile(data, `out/${config.hostInfo.hostname}/${shardName}/${roomName}.txt`);
             await map.drawMap(`out/${config.hostInfo.hostname}/${shardName}/${roomName}.png`);
             await api.rawApi.postSegment({
                 shard: shardName,

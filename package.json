@@ -27,9 +27,6 @@
         "url": "https://github.com/Ureimu/screeps-sideServer/issues"
     },
     "homepage": "https://github.com/Ureimu/screeps-sideServer#readme",
-    "engines": {
-        "node": "10.x || 12.x"
-    },
     "devDependencies": {
         "@rollup/plugin-commonjs": "^20.0.0",
         "@rollup/plugin-json": "^4.1.0",
@@ -74,7 +71,7 @@
         "graphology": "^0.26.0",
         "graphology-metrics": "^2.4.0",
         "node-gyp": "^8.2.0",
-        "node-ts-screeps-api": "^0.0.9",
+        "node-ts-screeps-api": "^0.0.13",
         "sharp": "^0.29.1",
         "source-map": "0.7.3",
         "source-map-support": "^0.5.20",

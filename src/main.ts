@@ -4,6 +4,7 @@ global._ = _;
 import { checkPath } from "utils/pathCheck";
 import { correspond } from "roomLayout";
 import { devTest } from "roomLayout/devTest";
+import { pathFinderDevTest } from "portalPathFinder";
 const stateHere = process.argv[2];
 console.log(stateHere, process.argv);
 process.on("unhandledRejection", error => {
@@ -17,19 +18,16 @@ export const mainFunction = async (state: string): Promise<void> => {
     if (state !== "dev") {
         await correspond(state);
     } else if (state === "dev") {
-        await devTest();
+        // await devTest();
+        await pathFinderDevTest();
     }
     console.profileEnd();
 };
 // console.log(process.env.NODE_ENV, process.argv);
 
-mainFunction(stateHere)
-    .then(() => {
-        // console.log("finish");
-    })
-    .catch(e => {
-        throw e;
-    });
+mainFunction(stateHere).catch(e => {
+    throw e;
+});
 
 // if (process.env.NODE_ENV === "production") {
 //     mainFunction(stateHere).catch(e => {

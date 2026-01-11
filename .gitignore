@@ -8,6 +8,7 @@
 /cache
 /dist
 /out
+/db
 /.rpt2_cache
 /tsc-out
 /node_modules
