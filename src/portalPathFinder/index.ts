@@ -1,21 +1,16 @@
-import { fileExists, readFile } from "utils/FileUtils";
 import { getPortalData } from "./dataBase/getPortalData";
 import { PortalGraph } from "./PortalGraph";
 import { readPortalData } from "./dataBase/readPortalData";
-
-const updateInterval = 1000 * 60 * 60 * 24 * 30;
 
 export async function pathFinderDevTest() {
     const state = "ureium";
 
     // 获取portal数据。
-    const createdTimeFileName = "db/portals/createdTime.txt";
-    const isExist = await fileExists(createdTimeFileName);
-    const isOutdated = Date.now() - parseInt((await readFile(createdTimeFileName)) ?? "0") > updateInterval;
-    if (!isExist || isOutdated) {
-        console.log(`portal data expired, updating portal data`);
-        await getPortalData(state, updateInterval);
-    }
+    await getPortalData(state, {
+        centerRoom: 1000 * 60 * 60 * 24 * 1,
+        closedSectorHighway: 1000 * 60 * 60 * 24 * 60,
+        highwayCross: 1000 * 60 * 60 * 24 * 30
+    });
 
     // 获取请求数据。
     const requireDataPairs: [from: string, to: string][] = [
