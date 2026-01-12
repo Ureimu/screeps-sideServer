@@ -55,7 +55,7 @@ export type InnerShardPortal = Portal & {
     };
 };
 
-export type PortalUpdateIntervalControl = { [key in MMOPortalType]: number };
+export type PortalUpdateIntervalControl = { [key in MMOPortalType]: number | false };
 
 export const getPortalTimeFileName: (shard: string, portalType: MMOPortalType) => string = (
     shard: string,
@@ -85,6 +85,9 @@ export async function getPortalData(
 
         const portalTypesToUpdate: MMOPortalType[] = [];
         for (const portalType of MMOPortalTypeList) {
+            if (updateInterval[portalType] === false) {
+                continue;
+            }
             const createdTimeFileName = getPortalTimeFileName(shard, portalType);
             const isExist = await fileExists(createdTimeFileName);
             const isOutdated =
@@ -133,7 +136,12 @@ export async function getPortalData(
                 .filter(i => !i.decayTime)
                 .filter(
                     // 由于只有centerRoom的portal会过期，这里假设存在unstableDate的j为centerRoom portal。
-                    j => !j.unstableDate || (j.unstableDate && j.unstableDate - timeNow > updateInterval.centerRoom)
+                    j =>
+                        !j.unstableDate ||
+                        (j.unstableDate &&
+                            ((updateInterval.centerRoom !== false &&
+                                j.unstableDate - timeNow > updateInterval.centerRoom) ||
+                                updateInterval.centerRoom === false))
                 )
                 .forEach(i => portalMap.set(`${i.destination.shard ?? ""}${i.destination.room}`, i));
             const roomPortals = Array.from(portalMap.values());

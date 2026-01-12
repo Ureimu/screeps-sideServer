@@ -1,6 +1,6 @@
 import { getPortalData, PortalUpdateIntervalControl } from "./dataBase/getPortalData";
 import { PortalGraph } from "./PortalGraph";
-import { readPortalData } from "./dataBase/readPortalData";
+import { IfUsingPortalType, readPortalData } from "./dataBase/readPortalData";
 import { apiConfig } from "../../authInfo";
 import { ScreepsApi } from "node-ts-screeps-api";
 import { SERVER_SHARDS } from "utils/constants/shard";
@@ -15,13 +15,26 @@ export async function pathFinderDevTest() {
 
     const pathCreatedTime = Date.now();
     const validDataPeriod: PortalUpdateIntervalControl = {
-        centerRoom: 1000 * 60 * 60 * 24 * 1,
-        closedSectorHighway: 1000 * 60 * 60 * 24 * 60,
+        //未使用centerRoom数据，因为很有可能centerRoom被其他有主房间围住，无法到达centerRoom
+        centerRoom: false, // 1000 * 60 * 60 * 24 * 1
+        closedSectorHighway: 1000 * 60 * 60 * 24 * 120,
         highwayCross: 1000 * 60 * 60 * 24 * 30
+    };
+
+    const ifUsingPortalType: IfUsingPortalType = {
+        centerRoom: false,
+        closedSectorHighway: true,
+        highwayCross: true
     };
     // 获取portal数据。
     await getPortalData(api, validDataPeriod);
-    const validPathDataPeriod = _.min(validDataPeriod);
+
+    const maxValidDataPeriod = 1000 * 60 * 60 * 24 * 360;
+    const validPathDataPeriod = _.min([
+        maxValidDataPeriod,
+        ...(_.filter(validDataPeriod, i => i !== false) as number[])
+    ]);
+    // TODO 其实还可以把shardPosition数据带上portal类型，以便于根据路径中的portal类型确定路径的过期时间。
 
     // 获取请求数据。
     const fullRequests: PortalPathDetail[] = [];
@@ -36,7 +49,7 @@ export async function pathFinderDevTest() {
 
     // 计算路径。
     console.log(`loading portal data from disk...`);
-    const portalData = await readPortalData();
+    const portalData = await readPortalData(ifUsingPortalType);
     if (!portalData) {
         console.log("no portalData");
         return;
@@ -68,11 +81,11 @@ export async function pathFinderDevTest() {
             request.path = result.path.join(",");
         }
         request.expireTime = pathCreatedTime + validPathDataPeriod;
+
+        // 发送数据到服务器。
         await api.rawApi.postMemory({ path: `portalPaths.${request.name}`, value: request, shard: request.fromShard });
         bar.increment();
     }
 
     console.log(fullRequests);
-
-    // 发送数据到服务器。
 }
