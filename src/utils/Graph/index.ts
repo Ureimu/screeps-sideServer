@@ -28,6 +28,7 @@ type HeuristicFunction<T> = (nodeA: GraphNode<T>, nodeB: GraphNode<T>) => number
 interface PathResult {
     path: (string | number)[];
     cost: number;
+    incomplete: boolean;
 }
 
 /**
@@ -191,7 +192,7 @@ class Graph<T = any> {
     findPath(startId: string | number, goalId: string | number): PathResult {
         // 检查起点和目标是否存在
         if (!this.nodes.has(startId) || !this.nodes.has(goalId)) {
-            return { path: [], cost: 0 };
+            return { path: [], cost: 0, incomplete: true };
         }
 
         const startNode = this.nodes.get(startId)!;
@@ -279,7 +280,7 @@ class Graph<T = any> {
         }
 
         // 开放列表为空且未找到目标，路径不存在
-        return { path: [], cost: 0 };
+        return { path: [], cost: 0, incomplete: true };
     }
 
     /**
@@ -296,7 +297,7 @@ class Graph<T = any> {
             current = current.parent;
         }
 
-        return { path, cost };
+        return { path, cost, incomplete: false };
     }
 
     /**

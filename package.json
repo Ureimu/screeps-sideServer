@@ -71,7 +71,7 @@
         "graphology": "^0.26.0",
         "graphology-metrics": "^2.4.0",
         "node-gyp": "^8.2.0",
-        "node-ts-screeps-api": "^0.0.13",
+        "node-ts-screeps-api": "^0.0.15",
         "sharp": "^0.29.1",
         "source-map": "0.7.3",
         "source-map-support": "^0.5.20",

@@ -66,11 +66,11 @@ export const getPortalDataFileName: (shard: string, portalType: MMOPortalType) =
     portalType: MMOPortalType
 ) => `db/portals/${shard}/${portalType}Portals.txt`;
 
-export async function getPortalData(state: string, updateInterval: PortalUpdateIntervalControl) {
+export async function getPortalData(
+    api: ScreepsApi<"signinByPassword" | "signinByToken">,
+    updateInterval: PortalUpdateIntervalControl
+) {
     const timeNow = Date.now();
-    const config = apiConfig(state);
-    const api = new ScreepsApi(config);
-    await api.auth();
 
     const multiBar = new MultiBar(
         {
