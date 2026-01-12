@@ -5,6 +5,7 @@ import { Portal } from "node-ts-screeps-api/dist/src/rawApiType/roomObjects";
 import { fileExists, readFile, saveFile } from "utils/FileUtils";
 import { checkCenterRoomName, getRoomsInRectangle } from "utils/roomNameUtils";
 import { MultiBar, Presets } from "cli-progress";
+import pLimit from "p-limit";
 
 function highwayCrossFilter(roomName: string): boolean {
     // 只包含路口
@@ -72,6 +73,9 @@ export async function getPortalData(
 ) {
     const timeNow = Date.now();
 
+    // 3比较稳定，5容易429
+    const limit = pLimit(3);
+
     const multiBar = new MultiBar(
         {
             clearOnComplete: false,
@@ -97,6 +101,9 @@ export async function getPortalData(
                 portalTypesToUpdate.push(portalType);
             }
         }
+        if (portalTypesToUpdate.length === 0) {
+            continue;
+        }
 
         const typedPortals: { [name in MMOPortalType]: SingleShardStoredPortalData } = {
             highwayCross: { innerShard: [], interShard: [] },
@@ -120,11 +127,11 @@ export async function getPortalData(
             return { room, shard };
         });
 
-        for (const args of objectGetArgs) {
+        const fetchDataFunc = async (args: { room: string; shard: string }) => {
             const data = await api.rawApi.getRoomObjects(args);
             if (!data.objects) {
                 progressBar.increment();
-                continue;
+                return;
             }
 
             // 根据数据更新周期过滤快要过期的portal，避免寻路到已过期portal。
@@ -162,8 +169,14 @@ export async function getPortalData(
                 );
             });
             progressBar.increment();
-            // await sleep(50);
+        };
+
+        const taskList = [];
+        for (const args of objectGetArgs) {
+            taskList.push(limit(() => fetchDataFunc(args)));
         }
+
+        await Promise.all(taskList);
 
         for (const portalType of portalTypesToUpdate) {
             const data = JSON.stringify(typedPortals[portalType]);

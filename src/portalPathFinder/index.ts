@@ -27,6 +27,7 @@ export async function pathFinderDevTest() {
         highwayCross: true
     };
     // 获取portal数据。
+    console.log(`getting portal data...`);
     await getPortalData(api, validDataPeriod);
 
     const maxValidDataPeriod = 1000 * 60 * 60 * 24 * 360;
@@ -41,9 +42,13 @@ export async function pathFinderDevTest() {
     for (const shard of SERVER_SHARDS.official) {
         const portalRawRequests = await api.rawApi.getMemory({ shard, path: "portalPaths" });
         if (!portalRawRequests.data) continue;
-        const portalRequests: { [name: string]: PortalPathDetail } = JSON.parse(portalRawRequests.data);
+        console.log(portalRawRequests);
+        const portalRequests: { [name: string]: PortalPathDetail } = portalRawRequests.data;
         if (!portalRequests) continue;
-        const requestsToProcess = _.filter(portalRequests, request => request.path === undefined);
+        const requestsToProcess = _.filter(
+            portalRequests,
+            request => request.path === undefined || (request.expireTime && pathCreatedTime > request.expireTime)
+        );
         fullRequests.push(...requestsToProcess);
     }
 
