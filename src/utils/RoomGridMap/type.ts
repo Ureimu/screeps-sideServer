@@ -6,6 +6,13 @@ export interface RoomGridPosition extends GridPosition {
     terrain: "plain" | "swamp" | "wall";
     objects: AnyRoomObjects[];
     layout: LayoutStructure[];
+    /**
+     * 表示区域类型。-1为未初始化，0为与出口连接区域，其他正数为特定受保护区域。
+     *
+     * @type {number}
+     * @memberof RoomGridPosition
+     */
+    group: number;
 }
 
 export interface LayoutStructure extends Coord {

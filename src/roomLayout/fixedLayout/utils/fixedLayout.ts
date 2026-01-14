@@ -27,7 +27,7 @@ export function fixedLayout(map: GridMap, layoutData: FixedLayoutData): void {
             ],
             map.rectPosList(
                 { xMin: 1, xMax: layoutData.size.width, yMin: 1, yMax: layoutData.size.height },
-                { ignoreWall: true, ignoreBorderLimit: true }
+                { ignoreUnwalkable: true, ignoreBorderLimit: true }
             )
         )
         .sort(

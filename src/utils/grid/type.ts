@@ -40,7 +40,13 @@ export interface PathResult {
 }
 
 export interface BasePosOpts {
-    ignoreWall: boolean;
+    ignoreUnwalkable: boolean;
+    /**
+     * （未启用）是否无视建筑。
+     *
+     * @type {boolean}
+     * @memberof BasePosOpts
+     */
     ignoreStructure: boolean;
     ignoreBorderLimit: boolean;
 }

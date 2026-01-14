@@ -110,7 +110,7 @@ export function findSpace(
         const nearbyPosList = map.hollowSquarePos(roadPos, 1, {
             ignoreBorderLimit: false,
             ignoreStructure: false,
-            ignoreWall: false
+            ignoreUnwalkable: false
         });
         nearbyPosList.forEach(nearbyPos => {
             const nearbyPosStr = map.posStr(nearbyPos);

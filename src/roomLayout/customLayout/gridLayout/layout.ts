@@ -146,7 +146,7 @@ function gridBasedFirstSpawn(map: GridMap, firstSpawnPos: Coord, doLayout = fals
                     // 保证核心区周围有一圈路免得卡creep
                     if (
                         map
-                            .mod2notEqualPos(pos2, 1, { ignoreWall: true })
+                            .mod2notEqualPos(pos2, 1, { ignoreUnwalkable: true })
                             .every(pos3 => roadExpand.has(map.posStr(pos3)))
                     ) {
                         i5++;
@@ -590,8 +590,38 @@ function gridBasedFirstSpawn(map: GridMap, firstSpawnPos: Coord, doLayout = fals
     const rampartPos = getMinCut(map, false);
     // console.log(rampartPos.length);
     map.addStructure("rampart", 8, 1, ...rampartPos);
+
+    map.calcProtectedArea();
+    if (
+        !map.isInSameProtectedArea(
+            ...map
+                .hollowSquarePos(controller, 1, { ignoreUnwalkable: true })
+                .filter(i => map.gridPos(i).terrain !== "wall"),
+            ...upgraderPosList,
+            firstSpawnPos
+        )
+    ) {
+        accessData.reason = "controller is not protected";
+        return accessData;
+    }
+
+    // const testSvg = new SvgCode(map.mapSize);
+    // map.grid.forEach(yList =>
+    //     yList.forEach(pos => {
+    //         if (pos.cost !== 0xff) {
+    //             testSvg.text(`${pos.group}`, pos, { fill: "blue", opacity: 1 });
+    //         }
+    //     })
+    // );
+    // map.visualizeDataList.push(testSvg);
+
+    const upgradeSpeed = Math.min(800 / map.getDistance(controllerLinkPos, centerLinkPos), 20 * upgraderPosList.length);
+
     accessData.rampartNum += rampartPos.length;
+    // rampart数量加成
     accessData.cost += rampartPos.length * 1e6;
+    // 冲级速度加成
+    accessData.cost -= upgradeSpeed * 1e6;
     accessData.existLayout = true;
     return accessData;
 }

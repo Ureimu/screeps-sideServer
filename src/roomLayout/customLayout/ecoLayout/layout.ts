@@ -6,7 +6,7 @@ export function ecoLayout(map: GridMap): void {
     const controller = map.findObjects("controller")[0];
     // 在source周围修extension
     sources.forEach(source => {
-        const sourceNearPos = map.squarePos(source, 1, { ignoreWall: true });
+        const sourceNearPos = map.squarePos(source, 1, { ignoreUnwalkable: true });
         const area = map.findArea(
             [{ name: "sourceNearPos", coordList: [...map.hollowSquarePos(source, 1)], type: "some" }],
             [source, ...sourceNearPos]

@@ -84,7 +84,7 @@ export class Grid {
 
     private basePosOpts: BasePosOpts = {
         ignoreStructure: false,
-        ignoreWall: false,
+        ignoreUnwalkable: false,
         ignoreBorderLimit: false
     };
     /**
@@ -108,7 +108,7 @@ export class Grid {
                 }
             }
         }
-        if (opts.ignoreWall) return coordList;
+        if (opts.ignoreUnwalkable) return coordList;
         else {
             return coordList.filter(coord => this.grid[coord.x][coord.y].cost < this.MAX_COST);
         }
@@ -135,7 +135,7 @@ export class Grid {
                 }
             }
         }
-        if (opts.ignoreWall) return coordList;
+        if (opts.ignoreUnwalkable) return coordList;
         else {
             return coordList.filter(coord => this.grid[coord.x][coord.y].cost < this.MAX_COST);
         }
@@ -163,7 +163,7 @@ export class Grid {
                 }
             }
         }
-        if (opts.ignoreWall) return coordList;
+        if (opts.ignoreUnwalkable) return coordList;
         else {
             return coordList.filter(coord => this.grid[coord.x][coord.y].cost < this.MAX_COST);
         }
@@ -191,7 +191,7 @@ export class Grid {
                 }
             }
         }
-        if (opts.ignoreWall) return coordList;
+        if (opts.ignoreUnwalkable) return coordList;
         else {
             return coordList.filter(coord => this.grid[coord.x][coord.y].cost < this.MAX_COST);
         }
@@ -229,7 +229,7 @@ export class Grid {
                 }
             }
         }
-        if (opts.ignoreWall) return coordList;
+        if (opts.ignoreUnwalkable) return coordList;
         else {
             return coordList.filter(coord => this.grid[coord.x][coord.y].cost < this.MAX_COST);
         }
@@ -267,7 +267,7 @@ export class Grid {
                 }
             }
         }
-        if (opts.ignoreWall) return coordList;
+        if (opts.ignoreUnwalkable) return coordList;
         else {
             return coordList.filter(coord => this.grid[coord.x][coord.y].cost < this.MAX_COST);
         }
@@ -619,7 +619,7 @@ export class Grid {
                         return { x: coord.x - areaRange.xMin + x, y: coord.y - areaRange.yMin + y };
                     });
                     // 处理
-                    if (!findAreaOpts.ignoreWall) {
+                    if (!findAreaOpts.ignoreUnwalkable) {
                         if (measureArea.some(measureCoord => this.gridPos(measureCoord).cost === this.MAX_COST)) {
                             continue;
                         }
@@ -741,7 +741,7 @@ export class Grid {
                 }
             }
         }
-        if (opts.ignoreWall) return coordList;
+        if (opts.ignoreUnwalkable) return coordList;
         else {
             return coordList.filter(coord => this.grid[coord.x][coord.y].cost < this.MAX_COST);
         }

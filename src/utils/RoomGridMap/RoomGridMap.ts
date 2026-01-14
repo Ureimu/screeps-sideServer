@@ -69,7 +69,8 @@ export class RoomGridMap extends Grid {
                     cost: terrainCost,
                     terrain: this.terrainMap[terrainData[x + y * 50] as "0" | "1" | "2" | "3"],
                     objects: this.getObjectsInPos({ x, y }, objects),
-                    layout: []
+                    layout: [],
+                    group: -1
                 };
             });
         });
@@ -346,6 +347,117 @@ export class RoomGridMap extends Grid {
         return coordList.every(pos => {
             return this.borderCache[range].every(borderPos => !this.isEqual(pos, borderPos));
         });
+    }
+
+    private resetAreaGroup() {
+        this.grid.forEach((xStack, x) => {
+            xStack.forEach((pos, y) => {
+                pos.group = -1;
+            });
+        });
+    }
+
+    // private loopPos(pos: Coord, action: (myPos: Coord) => void, getNextPosList: (myPos: Coord) => Coord[]): void {
+    //     action(pos);
+    //     const nextPosList = getNextPosList(pos);
+    //     if (nextPosList.length === 0) return;
+    //     nextPosList.forEach(i => this.loopPos(i, action, getNextPosList));
+    // }
+
+    private loopPos(pos: Coord, action: (myPos: Coord) => void, getNextPosList: (myPos: Coord) => Coord[]): void {
+        const stack: Coord[] = [pos];
+        const visited = new Set<string>();
+
+        while (stack.length > 0) {
+            const current = stack.pop()!;
+            const key = this.posStr(current);
+
+            if (visited.has(key)) continue;
+            visited.add(key);
+
+            action(current);
+            const nextPosList = getNextPosList(current);
+            nextPosList.forEach(i => stack.push(i));
+        }
+    }
+
+    public calcProtectedArea(): void {
+        // 根据cost=255的位置和rampart的位置，将其作为分割位置（即不可到达位置），cost=255的位置不与周围任何点连通，rampart的位置不与周围任何pos.group===0的位置连通。
+        this.resetAreaGroup();
+
+        // 从入口开始进行遍历。将所有入口能够走到的位置都赋值为pos.group=0。注意这里rampart所在的位置视为走不到。
+        this.walkableBorderPos.forEach(borderPos =>
+            this.loopPos(
+                borderPos,
+                i => (this.gridPos(i).group = 0),
+                i =>
+                    this.hollowSquarePos(i, 1, {
+                        ignoreUnwalkable: true,
+                        ignoreBorderLimit: false
+                    }).filter(j => {
+                        const gridJ = this.gridPos(j);
+                        if (gridJ.terrain === "wall") return false;
+                        if (gridJ.group !== -1) return false;
+                        if (
+                            gridJ.layout.some(
+                                k =>
+                                    getStructureTypeBySpecifiedName(k.type) === "constructedWall" ||
+                                    getStructureTypeBySpecifiedName(k.type) === "rampart"
+                            )
+                        ) {
+                            return false;
+                        }
+                        return true;
+                    })
+            )
+        );
+
+        let groupIndex = 0;
+
+        // 然后从rampart和wall（统称为buildableObstacle）所在的位置开始遍历，并给所有可达点赋值group=groupIndex。如果一个buildableObstacle在遍历开始时group值为-1，就执行(groupIndex++;pos.group=groupIndex)。如果一个buildableObstacle在遍历开始时有group值，就跳过这个buildableObstacle。
+        // WARNING 如果基本地形不是简单图，那就有可能导致有的区域的值仍然为-1，如果有多个不连通的这样的区域，那么布局就会出现错误。目前忽略该可能，因为没有见过基本地形出现不是简单图的情况。修复很简单，把遍历的点改为遍历地形墙和buildableObstacle即可。这样改明显计算量增大，所以我没改。
+        this.layoutStructures
+            .filter(
+                i =>
+                    getStructureTypeBySpecifiedName(i.type) === "constructedWall" ||
+                    getStructureTypeBySpecifiedName(i.type) === "rampart"
+            )
+            .forEach(buildableObstacle => {
+                const buildableObstacleGrid = this.gridPos(buildableObstacle);
+                if (buildableObstacleGrid.group !== -1) return;
+                groupIndex++;
+                buildableObstacleGrid.group = groupIndex;
+                this.loopPos(
+                    buildableObstacle,
+                    i => (this.gridPos(i).group = groupIndex),
+                    i =>
+                        this.hollowSquarePos(i, 1, {
+                            ignoreUnwalkable: true,
+                            ignoreBorderLimit: false
+                        }).filter(j => {
+                            const gridJ = this.gridPos(j);
+                            if (gridJ.terrain === "wall") return false;
+                            if (gridJ.group === 0) return false;
+                            return true;
+                        })
+                );
+            });
+    }
+
+    /**
+     * 检查给定的坐标是否在同一受保护区域内，区域由calcProtectedArea()计算。
+     *
+     * 受保护区域是指被墙壁和rampart围成的，不与入口连接的区域。
+     *
+     * @param {...Coord[]} coordList
+     * @return {*}  {boolean}
+     * @memberof RoomGridMap
+     */
+    public isInSameProtectedArea(...coordList: Coord[]): boolean {
+        if (coordList.length === 0) return true;
+        const groupValue = this.gridPos(coordList[0]).group;
+        if (groupValue === 0) return false;
+        return coordList.every(i => this.gridPos(i).group === groupValue);
     }
 }
 

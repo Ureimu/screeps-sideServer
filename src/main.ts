@@ -18,8 +18,8 @@ export const mainFunction = async (state: string): Promise<void> => {
     if (state !== "dev") {
         await correspond(state);
     } else if (state === "dev") {
-        // await devTest();
-        await pathFinderDevTest();
+        await devTest();
+        // await pathFinderDevTest();
     }
     console.profileEnd();
 };

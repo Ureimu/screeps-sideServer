@@ -5,12 +5,12 @@ import { apiConfig } from "../../authInfo";
 import { saveFile } from "utils/FileUtils";
 
 export async function devTest(): Promise<void> {
-    // const state = "ureium";
-    // const requireRoomNameList: string[] = ["E1N11", "W9N11", "W2N11"]; //
-    // const shardName = "shard3";
-    const state = "private";
-    const requireRoomNameList: string[] = ["W1N1"];
-    const shardName = "e4d6ef922e98";
+    const state = "ureium";
+    const requireRoomNameList: string[] = ["W1N8", "W1N9"]; //
+    const shardName = "shard2";
+    // const state = "private";
+    // const requireRoomNameList: string[] = ["W1N1"];
+    // const shardName = "e4d6ef922e98";
     const config = apiConfig(state);
     const objectData = await getLayoutData(
         state,
