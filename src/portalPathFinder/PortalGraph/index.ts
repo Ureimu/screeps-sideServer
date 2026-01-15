@@ -260,4 +260,23 @@ export class PortalGraph extends Graph<ShardPosition> {
             });
         });
     }
+
+    /**
+     * portal寻路算法。使用前需要使用addCreepPathDestNodePair添加起点与终点的节点，然后使用该函数，传入起点与终点节点名称即可寻路。返回的路径包含起点和终点，但是除这两点外所有节点都为portal类型节点。
+     *
+     */
+    public findPath(startId: string, goalId: string) {
+        const result = super.findPath(startId, goalId);
+        if (result.path.length > 0) {
+            const startPoint = result.path[0];
+            const endPoint = result.path[result.path.length - 1];
+            const filteredPath = [
+                startPoint,
+                ...result.path.filter(i => PortalGraph.fromShardPosStr(i as string).type === "portal"),
+                endPoint
+            ];
+            result.path = filteredPath;
+        }
+        return result;
+    }
 }

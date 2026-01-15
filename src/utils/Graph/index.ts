@@ -25,7 +25,7 @@ interface AStarNode<T> {
 // 启发式函数类型
 type HeuristicFunction<T> = (nodeA: GraphNode<T>, nodeB: GraphNode<T>) => number;
 
-interface PathResult {
+export interface PathResult {
     path: (string | number)[];
     cost: number;
     incomplete: boolean;

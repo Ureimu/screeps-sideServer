@@ -6,7 +6,7 @@ import { saveFile } from "utils/FileUtils";
 
 export async function devTest(): Promise<void> {
     const state = "ureium";
-    const requireRoomNameList: string[] = ["W1N8", "W1N9"]; //
+    const requireRoomNameList: string[] = ["W23N15"]; //
     const shardName = "shard2";
     // const state = "private";
     // const requireRoomNameList: string[] = ["W1N1"];
