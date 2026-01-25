@@ -49,8 +49,7 @@ export function ecoLayout(map: GridMap): void {
                 map.addStructure("sourceLink", 7, 1, posNearRoad.pop() as Coord);
             }
 
-            const numberE = map.addStructure("extension", 5, 1, ...posNearRoad);
-            console.log(numberE);
+            map.addStructure("extension", 5, 1, ...posNearRoad);
         }
     });
     // 绕着controller修一圈路

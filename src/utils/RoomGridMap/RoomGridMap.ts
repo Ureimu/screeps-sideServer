@@ -116,14 +116,15 @@ export class RoomGridMap extends Grid {
     }
 
     /**
-     * 添加建筑到layout，总会返回当前rcl等级限制的最大建筑数量与当前的建筑总数的差值，
-     * 如果超限会返回负数且不会添加任何建筑。
+     * 添加建筑到layout。
+     * 返回值：
+     * * remainingNum: 返回当前rcl等级限制的最大建筑数量与当前的建筑总数的差值，如果超限会返回负数且不会添加任何建筑。
+     * * succeedList: 成功放置的Coord列表。
      *
      * @param {BuildableStructureConstant} type
      * @param {ControllerLevel} level
      * @param {number} priority
      * @param {...Coord[]} structures
-     * @returns {number}
      * @memberof RoomGridMap
      */
     public addStructure(
@@ -131,36 +132,35 @@ export class RoomGridMap extends Grid {
         level: ControllerLevel,
         priority: number,
         ...structures: Coord[]
-    ): number {
+    ): { remainingNum: number; succeedList: Coord[] } {
         const structureType = getStructureTypeBySpecifiedName(type);
         const exceededNum = this.getStatsOfStructure(structureType, level, structures.length);
-        if (exceededNum < 0) return exceededNum;
-        const typedStructures = structures
-            .filter(i => {
-                const gridPos = this.gridPos(i);
-                if (
-                    gridPos.cost === this.MAX_COST &&
-                    structureType !== "rampart" &&
-                    structureType !== "road" &&
-                    !(structureType === "extractor" && gridPos.objects.some(j => j.type === "mineral"))
-                ) {
-                    return false;
-                }
-                if (gridPos.cost === this.roadCost && structureType !== "container" && type !== "rampart") {
-                    return false;
-                }
-                return true;
-            })
-            .map(i => {
-                return { ...i, type, levelToBuild: level, priority };
-            });
+        if (exceededNum < 0) return { remainingNum: exceededNum, succeedList: [] };
+        const typedStructureCoords = structures.filter(i => {
+            const gridPos = this.gridPos(i);
+            if (
+                gridPos.cost === this.MAX_COST &&
+                structureType !== "rampart" &&
+                structureType !== "road" &&
+                !(structureType === "extractor" && gridPos.objects.some(j => j.type === "mineral"))
+            ) {
+                return false;
+            }
+            if (gridPos.cost === this.roadCost && structureType !== "container" && type !== "rampart") {
+                return false;
+            }
+            return true;
+        });
+        const typedStructures = typedStructureCoords.map(i => {
+            return { ...i, type, levelToBuild: level, priority };
+        });
         this.layoutStructures.push(...typedStructures);
         typedStructures.forEach(structure => {
             const gridPos = this.gridPos(structure);
             gridPos.layout.push(structure);
             this.setCostForPos(gridPos);
         });
-        return exceededNum;
+        return { remainingNum: exceededNum, succeedList: typedStructureCoords };
     }
 
     public addStructureByFillingLevel(
@@ -179,7 +179,7 @@ export class RoomGridMap extends Grid {
         // console.log(`start ${coords.length}`);
         while (pos) {
             const level = i as ControllerLevel;
-            const exceededNum = this.addStructure(type, level, priority(level, k, pos), pos);
+            const exceededNum = this.addStructure(type, level, priority(level, k, pos), pos).remainingNum;
             if (exceededNum >= 0) {
                 // console.log(`put level:${i}`);
                 j++;
