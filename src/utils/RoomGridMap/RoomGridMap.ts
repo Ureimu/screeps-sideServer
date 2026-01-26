@@ -132,10 +132,10 @@ export class RoomGridMap extends Grid {
         level: ControllerLevel,
         priority: number,
         ...structures: Coord[]
-    ): { remainingNum: number; succeedList: Coord[] } {
+    ): { remainingNum: number; succeedList: Coord[]; isFullyAdded: boolean } {
         const structureType = getStructureTypeBySpecifiedName(type);
         const exceededNum = this.getStatsOfStructure(structureType, level, structures.length);
-        if (exceededNum < 0) return { remainingNum: exceededNum, succeedList: [] };
+        if (exceededNum < 0) return { remainingNum: exceededNum, succeedList: [], isFullyAdded: false };
         const typedStructureCoords = structures.filter(i => {
             const gridPos = this.gridPos(i);
             if (
@@ -160,7 +160,11 @@ export class RoomGridMap extends Grid {
             gridPos.layout.push(structure);
             this.setCostForPos(gridPos);
         });
-        return { remainingNum: exceededNum, succeedList: typedStructureCoords };
+        return {
+            remainingNum: exceededNum,
+            succeedList: typedStructureCoords,
+            isFullyAdded: structures.length === typedStructures.length
+        };
     }
 
     public addStructureByFillingLevel(

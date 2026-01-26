@@ -1,10 +1,10 @@
 import { SingleBar } from "cli-progress";
 import { readFileSync, writeFileSync } from "fs";
-import { Range } from "utils/common/type";
+import { BuildableStructureConstant, ControllerLevel, Range } from "utils/common/type";
 import { Coord } from "utils/Grid/type";
 import { getMinCut } from "utils/mincut/minCut";
 import { GridMap } from "utils/RoomGridMap";
-import { RoomGridPosition } from "utils/RoomGridMap/type";
+import { RoomGridPosition, SpecifiedStructureNameList } from "utils/RoomGridMap/type";
 import { SvgCode } from "utils/SvgCode";
 import { findSpace } from "./findSpace";
 
@@ -94,6 +94,19 @@ export function gridLayout(map: GridMap): boolean {
     }
 }
 
+function tryAddStructure(
+    map: GridMap,
+    accessData: LayoutAccessData,
+    ...args: Parameters<GridMap["addStructure"]>
+): boolean {
+    const rtn = map.addStructure(...args);
+    if (!rtn.isFullyAdded) {
+        accessData.reason = `cannot put ${args[0]} with level ${args[1]}`;
+        return false;
+    }
+    return true;
+}
+
 function gridBasedFirstSpawn(map: GridMap, firstSpawnPos: Coord, doLayout = false): LayoutAccessData {
     const accessData: LayoutAccessData = {
         existLayout: false,
@@ -104,7 +117,8 @@ function gridBasedFirstSpawn(map: GridMap, firstSpawnPos: Coord, doLayout = fals
     };
 
     // console.log("add");
-    map.addStructure("spawn", 1, 10, firstSpawnPos);
+    if (!tryAddStructure(map, accessData, "spawn", 1, 10, firstSpawnPos)) return accessData;
+
     // console.log(map.mod2notEqualPos(firstSpawnPos, 1).map(map.posStr));
     const svg = new SvgCode(map.mapSize).circle(firstSpawnPos).text(`F`, firstSpawnPos, { fill: "blue", opacity: 1 });
     map.visualizeDataList.push(svg);
@@ -181,10 +195,10 @@ function gridBasedFirstSpawn(map: GridMap, firstSpawnPos: Coord, doLayout = fals
     });
 
     const [centerLinkPos, factoryPos, terminalPos, storagePos] = center4Pos;
-    map.addStructure("centerLink", 5, 10, centerLinkPos);
-    map.addStructure("factory", 7, 10, factoryPos);
-    map.addStructure("terminal", 6, 10, terminalPos);
-    map.addStructure("storage", 4, 10, storagePos);
+    if (!tryAddStructure(map, accessData, "centerLink", 5, 10, centerLinkPos)) return accessData;
+    if (!tryAddStructure(map, accessData, "factory", 7, 10, factoryPos)) return accessData;
+    if (!tryAddStructure(map, accessData, "terminal", 6, 10, terminalPos)) return accessData;
+    if (!tryAddStructure(map, accessData, "storage", 4, 10, storagePos)) return accessData;
 
     // 判断powerSpawn,Nuker，ob,两个spawn的位置（尽量靠近storage）
     const obSet = new Set<string>();
@@ -477,8 +491,9 @@ function gridBasedFirstSpawn(map: GridMap, firstSpawnPos: Coord, doLayout = fals
                 const containerPos = result.path.pop();
                 if (!containerPos) return false;
                 map.removeStructure("baseRoad", ...result.path);
-                map.addStructure("sourceAndControllerRoad", 2, 0, ...result.path);
-                map.addStructure("sourceContainer", 0, 0, containerPos);
+                if (!tryAddStructure(map, accessData, "sourceAndControllerRoad", 2, 0, ...result.path))
+                    return accessData;
+                if (!tryAddStructure(map, accessData, "sourceContainer", 0, 0, containerPos)) return accessData;
                 const linkPos = map.squarePos(containerPos, 1).filter(pos => {
                     const posHere = map.gridPos(pos);
                     if (posHere.layout.length === 0 && posHere.terrain !== "wall") return true;
@@ -486,10 +501,10 @@ function gridBasedFirstSpawn(map: GridMap, firstSpawnPos: Coord, doLayout = fals
                 })[0];
                 if (!linkPos) return false;
                 if (!hasPutLinkAtLevel6) {
-                    map.addStructure("sourceLink", 6, 8, linkPos);
+                    if (!tryAddStructure(map, accessData, "sourceLink", 6, 8, linkPos)) return accessData;
                     hasPutLinkAtLevel6 = true;
                 } else {
-                    map.addStructure("sourceLink", 7, 8, linkPos);
+                    if (!tryAddStructure(map, accessData, "sourceLink", 7, 8, linkPos)) return accessData;
                 }
 
                 map.setCost(containerPos, map.MAX_COST / 2);
@@ -505,7 +520,7 @@ function gridBasedFirstSpawn(map: GridMap, firstSpawnPos: Coord, doLayout = fals
     }
 
     const mineral = map.findObjects("mineral")[0];
-    map.addStructure("extractor", 6, 1, mineral);
+    if (!tryAddStructure(map, accessData, "extractor", 6, 1, mineral)) return accessData;
     const mineralRoadResult = map.findPath(centerPos, mineral, 1);
     if (mineralRoadResult.isFinish) {
         const containerPos = mineralRoadResult.path.pop();
@@ -514,8 +529,8 @@ function gridBasedFirstSpawn(map: GridMap, firstSpawnPos: Coord, doLayout = fals
             return accessData;
         }
         map.removeStructure("baseRoad", ...mineralRoadResult.path);
-        map.addStructure("mineralRoad", 2, 0, ...mineralRoadResult.path);
-        map.addStructure("mineralContainer", 5, 0, containerPos);
+        if (!tryAddStructure(map, accessData, "mineralRoad", 2, 0, ...mineralRoadResult.path)) return accessData;
+        if (!tryAddStructure(map, accessData, "mineralContainer", 5, 0, containerPos)) return accessData;
         map.setCost(containerPos, map.MAX_COST / 2);
     } else {
         accessData.reason = "no mineral road";
@@ -574,9 +589,10 @@ function gridBasedFirstSpawn(map: GridMap, firstSpawnPos: Coord, doLayout = fals
         return accessData;
     }
     map.removeStructure("baseRoad", ...controllerRoadResult.path);
-    map.addStructure("sourceAndControllerRoad", 2, 0, ...controllerRoadResult.path);
-    map.addStructure("controllerContainer", 0, 0, containerPos);
-    map.addStructure("controllerLink", 5, 10, controllerLinkPos);
+    if (!tryAddStructure(map, accessData, "sourceAndControllerRoad", 2, 0, ...controllerRoadResult.path))
+        return accessData;
+    if (!tryAddStructure(map, accessData, "controllerContainer", 0, 0, containerPos)) return accessData;
+    if (!tryAddStructure(map, accessData, "controllerLink", 5, 10, controllerLinkPos)) return accessData;
     map.setCost(containerPos, map.MAX_COST / 2);
 
     // 设为map.MAX_COST后该位置会被视为建筑。
@@ -589,7 +605,7 @@ function gridBasedFirstSpawn(map: GridMap, firstSpawnPos: Coord, doLayout = fals
 
     const rampartPos = getMinCut(map, false);
     // console.log(rampartPos.length);
-    map.addStructure("rampart", 8, 1, ...rampartPos);
+    if (!tryAddStructure(map, accessData, "rampart", 8, 1, ...rampartPos)) return accessData;
 
     map.calcProtectedArea();
     if (
