@@ -146,7 +146,12 @@ export class RoomGridMap extends Grid {
             ) {
                 return false;
             }
-            if (gridPos.cost === this.roadCost && structureType !== "container" && type !== "rampart") {
+            if (
+                gridPos.cost === this.roadCost &&
+                structureType !== "container" &&
+                type !== "rampart" &&
+                structureType !== "road"
+            ) {
                 return false;
             }
             return true;

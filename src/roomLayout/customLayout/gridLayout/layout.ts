@@ -519,24 +519,6 @@ function gridBasedFirstSpawn(map: GridMap, firstSpawnPos: Coord, doLayout = fals
         return accessData;
     }
 
-    const mineral = map.findObjects("mineral")[0];
-    if (!tryAddStructure(map, accessData, "extractor", 6, 1, mineral)) return accessData;
-    const mineralRoadResult = map.findPath(centerPos, mineral, 1);
-    if (mineralRoadResult.isFinish) {
-        const containerPos = mineralRoadResult.path.pop();
-        if (!containerPos) {
-            accessData.reason = "no mineral container pos";
-            return accessData;
-        }
-        map.removeStructure("baseRoad", ...mineralRoadResult.path);
-        if (!tryAddStructure(map, accessData, "mineralRoad", 2, 0, ...mineralRoadResult.path)) return accessData;
-        if (!tryAddStructure(map, accessData, "mineralContainer", 5, 0, containerPos)) return accessData;
-        map.setCost(containerPos, map.MAX_COST / 2);
-    } else {
-        accessData.reason = "no mineral road";
-        return accessData;
-    }
-
     const controller = map.findObjects("controller")[0];
 
     // 依次选择以range:2为中心，以1,3为中心，以4为中心的list，寻找最优的解。
@@ -618,6 +600,24 @@ function gridBasedFirstSpawn(map: GridMap, firstSpawnPos: Coord, doLayout = fals
         )
     ) {
         accessData.reason = "controller is not protected";
+        return accessData;
+    }
+
+    const mineral = map.findObjects("mineral")[0];
+    if (!tryAddStructure(map, accessData, "extractor", 6, 1, mineral)) return accessData;
+    const mineralRoadResult = map.findPath(centerPos, mineral, 1);
+    if (mineralRoadResult.isFinish) {
+        const containerPos = mineralRoadResult.path.pop();
+        if (!containerPos) {
+            accessData.reason = "no mineral container pos";
+            return accessData;
+        }
+        map.removeStructure("baseRoad", ...mineralRoadResult.path);
+        if (!tryAddStructure(map, accessData, "mineralRoad", 2, 0, ...mineralRoadResult.path)) return accessData;
+        if (!tryAddStructure(map, accessData, "mineralContainer", 5, 0, containerPos)) return accessData;
+        map.setCost(containerPos, map.MAX_COST / 2);
+    } else {
+        accessData.reason = "no mineral road";
         return accessData;
     }
 
