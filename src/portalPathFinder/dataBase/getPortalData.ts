@@ -74,7 +74,7 @@ export async function getPortalData(
     const timeNow = Date.now();
 
     // 3比较稳定，5容易429
-    const limit = pLimit(3);
+    const limit = pLimit(1);
 
     const multiBar = new MultiBar(
         {

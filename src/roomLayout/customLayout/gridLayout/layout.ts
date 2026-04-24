@@ -587,7 +587,7 @@ function gridBasedFirstSpawn(map: GridMap, firstSpawnPos: Coord, doLayout = fals
 
     const rampartPos = getMinCut(map, false);
     // console.log(rampartPos.length);
-    if (!tryAddStructure(map, accessData, "rampart", 8, 1, ...rampartPos)) return accessData;
+    if (!tryAddStructure(map, accessData, "rampart", 4, 1, ...rampartPos)) return accessData;
 
     map.calcProtectedArea();
     if (

@@ -48,9 +48,9 @@ class Graph<T = any> {
     /**
      * 添加节点到图中
      */
-    addNode(id: string | number, data: T): void {
+    addNode(id: string | number, data: T): boolean {
         if (this.nodes.has(id)) {
-            throw new Error(`Node with id ${id} already exists`);
+            return false;
         }
 
         this.nodes.set(id, {
@@ -58,6 +58,7 @@ class Graph<T = any> {
             data,
             neighbors: []
         });
+        return true;
     }
 
     /**
