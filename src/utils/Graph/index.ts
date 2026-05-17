@@ -115,8 +115,12 @@ class Graph<T = any> {
      * 添加边到图中
      */
     addEdge(from: string | number, to: string | number, weight: number = 1): void {
-        if (!this.nodes.has(from) || !this.nodes.has(to)) {
-            throw new Error("One or both nodes do not exist");
+        if (!this.nodes.has(from)) {
+            throw new Error(`from node does not exist:${from}`);
+        }
+
+        if (!this.nodes.has(to)) {
+            throw new Error(`to node does not exist:${to}`);
         }
 
         const edgeId = this.getEdgeId(from, to);

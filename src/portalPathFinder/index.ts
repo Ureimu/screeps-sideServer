@@ -7,6 +7,13 @@ import { SERVER_SHARDS } from "utils/constants/shard";
 import { PortalPathDetail } from "./inGameType";
 import { Bar, Presets } from "cli-progress";
 
+export const validDataPeriod: PortalUpdateIntervalControl = {
+    //未使用centerRoom数据，因为很有可能centerRoom被其他有主房间围住，无法到达centerRoom
+    centerRoom: false, // 1000 * 60 * 60 * 24 * 1
+    closedSectorHighway: 1000 * 60 * 60 * 24 * 120,
+    highwayCross: 1000 * 60 * 60 * 24 * 7
+};
+
 export async function pathFinderDevTest() {
     const state = "ureium";
     const config = apiConfig(state);
@@ -14,12 +21,6 @@ export async function pathFinderDevTest() {
     await api.auth();
 
     const pathCreatedTime = Date.now();
-    const validDataPeriod: PortalUpdateIntervalControl = {
-        //未使用centerRoom数据，因为很有可能centerRoom被其他有主房间围住，无法到达centerRoom
-        centerRoom: false, // 1000 * 60 * 60 * 24 * 1
-        closedSectorHighway: 1000 * 60 * 60 * 24 * 120,
-        highwayCross: 1000 * 60 * 60 * 24 * 30
-    };
 
     const ifUsingPortalType: IfUsingPortalType = {
         centerRoom: false,
@@ -87,10 +88,13 @@ export async function pathFinderDevTest() {
         }
         request.expireTime = pathCreatedTime + validPathDataPeriod;
 
-        // 发送数据到服务器。
-        await api.rawApi.postMemory({ path: `portalPaths.${request.name}`, value: request, shard: request.fromShard });
         bar.increment();
     }
 
     console.log(fullRequests);
+
+    // 发送数据到服务器。
+    for (const request of fullRequests) {
+        await api.rawApi.postMemory({ path: `portalPaths.${request.name}`, value: request, shard: request.fromShard });
+    }
 }

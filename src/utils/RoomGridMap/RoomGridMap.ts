@@ -16,6 +16,9 @@ import { CacheLayoutData, LayoutStructure, RoomGridPosition, SpecifiedStructureN
 import { promises as fs } from "fs";
 import * as path from "path";
 
+// TODO 建筑和rampart，wall不能放置到距exit1格内的位置；需要实现该限制。
+// 实现方式为重写Grid的isInBorder方法，为其添加exit周围一格的所有地块不允许建造除road以外建筑的限制。
+
 export class RoomGridMap extends Grid {
     public static multiBar = new MultiBar(
         {

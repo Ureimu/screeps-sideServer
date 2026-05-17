@@ -5,6 +5,7 @@ import { checkPath } from "utils/pathCheck";
 import { correspond } from "roomLayout";
 import { devTest } from "roomLayout/devTest";
 import { pathFinderDevTest } from "portalPathFinder";
+import { findNewRoomsPath } from "portalPathFinder/findNewRoomsPath";
 const stateHere = process.argv[2];
 console.log(stateHere, process.argv);
 process.on("unhandledRejection", error => {
@@ -19,7 +20,10 @@ export const mainFunction = async (state: string): Promise<void> => {
         await correspond(state);
     } else if (state === "dev") {
         //  await devTest();
-        await pathFinderDevTest();
+        // await pathFinderDevTest();
+        const pathResults = await findNewRoomsPath([{ shard: "shard1", room: "W49N39" }]);
+        pathResults.sort((a, b) => (b.cost ?? Infinity) - (a.cost ?? Infinity));
+        console.log(pathResults);
     }
     console.profileEnd();
 };
